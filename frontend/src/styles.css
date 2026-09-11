@@ -1,0 +1,664 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #f5f5f5;
+  background: #050505;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(
+      circle at 85% 10%,
+      #250b0b,
+      transparent 30%
+    ),
+    #050505;
+}
+
+/* =========================================
+   APP CONTAINER
+========================================= */
+
+.app {
+  width: min(1180px, calc(100% - 40px));
+  margin: auto;
+  padding: 24px 0;
+}
+
+/* =========================================
+   NAVIGATION
+========================================= */
+
+nav {
+  height: 68px;
+  border-bottom: 1px solid #242424;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 42px;
+  height: 42px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #3b1515;
+  background: #120707;
+  color: #ff4747;
+
+  border-radius: 11px;
+}
+
+.brand b {
+  display: block;
+}
+
+.brand span {
+  display: block;
+  color: #777;
+  font-size: 11px;
+}
+
+.badge {
+  border: 1px solid #3b1515;
+  color: #ff5a5a;
+  background: #100606;
+
+  border-radius: 99px;
+  padding: 7px 12px;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* =========================================
+   HERO SECTION
+========================================= */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.5fr 0.8fr;
+  gap: 60px;
+
+  padding: 70px 0 45px;
+
+  align-items: center;
+}
+
+.eyebrow {
+  color: #ff5151;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.hero h1 {
+  font-size: clamp(44px, 6vw, 72px);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+
+  margin: 18px 0;
+}
+
+.hero h1 span {
+  color: #707070;
+}
+
+.desc {
+  max-width: 680px;
+  color: #969696;
+  line-height: 1.7;
+}
+
+/* =========================================
+   SYSTEM STATUS
+========================================= */
+
+.status {
+  padding: 22px;
+
+  border: 1px solid #242424;
+  border-radius: 18px;
+
+  background: #0e0e0e;
+}
+
+.status h3 {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+
+  margin: 0;
+  padding-bottom: 18px;
+
+  border-bottom: 1px solid #252525;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 17px 0;
+
+  border-bottom: 1px solid #1e1e1e;
+
+  color: #aaa;
+  font-size: 13px;
+}
+
+.status-row span {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+
+.status-row b {
+  font-size: 11px;
+}
+
+.good {
+  color: #72d99a;
+}
+
+.bad {
+  color: #ff6868;
+}
+
+.status-row i {
+  display: inline-block;
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+/* =========================================
+   EMAIL ANALYZER
+========================================= */
+
+.analyzer {
+  margin-top: 10px;
+  padding: 28px;
+
+  border: 1px solid #252525;
+  border-radius: 20px;
+
+  background: #0a0a0a;
+}
+
+/* =========================================
+   SECTION HEADER
+========================================= */
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+
+  color: #ff5757;
+}
+
+.section-head h2 {
+  margin: 8px 0;
+
+  color: #eee;
+  font-size: 28px;
+}
+
+.section-head p:not(.eyebrow) {
+  max-width: 780px;
+
+  color: #777;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* =========================================
+   TABS
+========================================= */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+
+  margin: 26px 0 14px;
+}
+
+.tabs button {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+
+  padding: 10px 14px;
+
+  border: 1px solid #292929;
+  border-radius: 9px;
+
+  background: #0b0b0b;
+  color: #777;
+}
+
+.tabs .active {
+  color: #fff;
+
+  border-color: #5b2525;
+  background: #180909;
+}
+
+/* =========================================
+   FILE DROP AREA
+========================================= */
+
+.drop {
+  min-height: 190px;
+
+  border: 1px dashed #3a2929;
+  border-radius: 14px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: 10px;
+
+  color: #ff5a5a;
+
+  cursor: pointer;
+}
+
+.drop strong {
+  color: #ddd;
+}
+
+.drop span {
+  color: #666;
+  font-size: 11px;
+}
+
+/* =========================================
+   RAW EMAIL INPUT
+========================================= */
+
+.raw {
+  width: 100%;
+  min-height: 250px;
+
+  resize: vertical;
+
+  padding: 17px;
+
+  border: 1px solid #292929;
+  border-radius: 13px;
+
+  outline: 0;
+
+  background: #070707;
+  color: #ddd;
+
+  font: 12px/1.6 Consolas, monospace;
+}
+
+/* =========================================
+   PRIMARY BUTTON
+========================================= */
+
+.primary {
+  width: 100%;
+
+  margin-top: 14px;
+  padding: 13px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  gap: 9px;
+
+  border: 1px solid #702929;
+  border-radius: 10px;
+
+  background: #5c1717;
+  color: #fff;
+
+  font-weight: 800;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+}
+
+/* =========================================
+   ERROR MESSAGE
+========================================= */
+
+.error {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+
+  margin-top: 18px;
+  padding: 14px 16px;
+
+  border: 1px solid #542020;
+  border-radius: 10px;
+
+  color: #ff8888;
+  background: #160808;
+
+  font-size: 13px;
+}
+
+/* =========================================
+   RESULT SECTION
+========================================= */
+
+.result {
+  margin-top: 24px;
+  padding-top: 24px;
+
+  border-top: 1px solid #242424;
+}
+
+/* =========================================
+   SUCCESS MESSAGE
+========================================= */
+
+.success {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  color: #72d99a;
+  font-weight: 700;
+}
+
+.success span {
+  margin-left: auto;
+
+  color: #777;
+
+  font: 11px monospace;
+}
+
+/* =========================================
+   HASH
+========================================= */
+
+.hash {
+  display: grid;
+  gap: 7px;
+
+  margin-top: 17px;
+  padding: 15px;
+
+  border: 1px solid #252525;
+  border-radius: 11px;
+
+  background: #070707;
+}
+
+.hash small,
+.item small {
+  color: #666;
+
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hash code {
+  overflow-wrap: anywhere;
+
+  color: #ccc;
+  font-size: 11px;
+}
+
+/* =========================================
+   RESULT GRID
+========================================= */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 10px;
+
+  margin-top: 10px;
+}
+
+.item {
+  padding: 14px;
+
+  border: 1px solid #202020;
+  border-radius: 10px;
+
+  background: #090909;
+}
+
+.item span {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #bbb;
+  font-size: 12px;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   TWO COLUMN SECTION
+========================================= */
+
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 10px;
+
+  margin-top: 10px;
+}
+
+/* =========================================
+   PANELS
+========================================= */
+
+.panel,
+.body {
+  padding: 17px;
+
+  border: 1px solid #202020;
+  border-radius: 11px;
+
+  background: #090909;
+}
+
+.panel h3,
+.body h3 {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  margin: 0 0 13px;
+
+  font-size: 13px;
+}
+
+.panel h3 svg {
+  color: #ff5757;
+}
+
+/* =========================================
+   METADATA ROW
+========================================= */
+
+.row,
+.url {
+  padding: 10px 0;
+
+  border-top: 1px solid #181818;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+.row b,
+.row small {
+  display: block;
+}
+
+.row b {
+  color: #bbb;
+  font-size: 12px;
+}
+
+.row small {
+  margin-top: 4px;
+
+  color: #555;
+  font-size: 10px;
+}
+
+.row code {
+  color: #666;
+  font-size: 9px;
+}
+
+/* =========================================
+   URL SECTION
+========================================= */
+
+.url b {
+  display: block;
+
+  color: #d07878;
+  font-size: 11px;
+}
+
+.url span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #666;
+
+  font: 10px Consolas, monospace;
+
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   MUTED TEXT
+========================================= */
+
+.muted {
+  color: #555;
+  font-size: 12px;
+}
+
+/* =========================================
+   EMAIL BODY
+========================================= */
+
+.body {
+  margin-top: 10px;
+}
+
+.body p {
+  margin: 0;
+
+  color: #888;
+
+  font-size: 12px;
+  line-height: 1.7;
+
+  white-space: pre-wrap;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+footer {
+  display: flex;
+  justify-content: space-between;
+
+  padding: 35px 0 10px;
+
+  color: #4f4f4f;
+  font-size: 11px;
+}
+
+/* =========================================
+   TABLET / MOBILE
+========================================= */
+
+@media (max-width: 800px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 35px;
+  }
+
+  .grid,
+  .two {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 500px) {
+  .app {
+    width: calc(100% - 24px);
+  }
+
+  .brand span {
+    display: none;
+  }
+
+  .hero h1 {
+    font-size: 44px;
+  }
+
+  .analyzer {
+    padding: 18px;
+  }
+
+  .success {
+    align-items: flex-start;
+  }
+
+  .success span {
+    margin-left: 0;
+  }
+
+  footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
