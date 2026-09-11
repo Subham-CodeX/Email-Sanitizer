@@ -5,108 +5,103 @@ import {
 } from "react";
 
 import {
+  Activity,
   AlertTriangle,
+  Building2,
   CheckCircle2,
+  CircleDot,
   FileText,
+  Globe2,
   Link2,
   Mail,
+  MapPin,
+  Network,
   Paperclip,
   Search,
+  Server,
+  ShieldAlert,
   ShieldCheck,
   Upload,
 } from "lucide-react";
 
 import {
   analyzeHeaders,
-  EmailResult,
+  analyzeIntelligence,
+  EmailIntelligence,
   HeaderForensics,
   ingestEml,
   ingestRaw,
+  IPIntelligence,
+  Result,
+  SenderDomainIntelligence,
 } from "../services/api";
 
+import "../intelligence.css";
 
 export default function EmailAnalyzer() {
 
-  const [
-    mode,
-    setMode,
-  ] = useState<
-    "upload" | "raw"
-  >("upload");
+  const [mode, setMode] =
+    useState<
+      "upload" | "raw"
+    >("upload");
 
-
-  const [
-    file,
-    setFile,
-  ] = useState<File | null>(
-    null
-  );
-
-
-  const [
-    raw,
-    setRaw,
-  ] = useState("");
-
-
-  const [
-    result,
-    setResult,
-  ] = useState<EmailResult | null>(
-    null
-  );
-
-
-  const [
-    forensicResult,
-    setForensicResult,
-  ] = useState<
-    HeaderForensics | null
-  >(null);
-
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-
-  const [
-    analyzing,
-    setAnalyzing,
-  ] = useState(false);
-
-
-  const [
-    error,
-    setError,
-  ] = useState("");
-
-
-  const inputRef =
-    useRef<HTMLInputElement>(
-      null
+  const [file, setFile] =
+    useState<File | null>(
+      null,
     );
 
+  const [raw, setRaw] =
+    useState("");
 
-  const chooseFile = (
-    event: ChangeEvent<HTMLInputElement>
+  const [result, setResult] =
+    useState<Result | null>(
+      null,
+    );
+
+  const [headers, setHeaders] =
+    useState<HeaderForensics | null>(
+      null,
+    );
+
+  const [intelligence, setIntelligence] =
+    useState<EmailIntelligence | null>(
+      null,
+    );
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [headerLoading, setHeaderLoading] =
+    useState(false);
+
+  const [intelLoading, setIntelLoading] =
+    useState(false);
+
+  const ref =
+    useRef<HTMLInputElement>(
+      null,
+    );
+
+  const choose = (
+    e: ChangeEvent<HTMLInputElement>,
   ) => {
 
     setFile(
-      event.target.files?.[0]
-      ?? null
+      e.target.files?.[0]
+      ?? null,
     );
 
     setResult(null);
 
-    setForensicResult(
-      null
-    );
+    setHeaders(null);
+
+    setIntelligence(null);
 
     setError("");
   };
-
 
   const submit = async () => {
 
@@ -114,28 +109,29 @@ export default function EmailAnalyzer() {
 
     setResult(null);
 
-    setForensicResult(null);
+    setHeaders(null);
+
+    setIntelligence(null);
 
     setLoading(true);
 
     try {
 
-      if (mode === "upload") {
+      if (
+        mode === "upload"
+      ) {
 
         if (!file) {
 
           throw new Error(
-            "Select an .eml file first."
+            "Select an .eml file first.",
           );
         }
 
-        const response =
-          await ingestEml(
-            file
-          );
-
         setResult(
-          response
+          await ingestEml(
+            file,
+          ),
         );
 
       } else {
@@ -143,28 +139,25 @@ export default function EmailAnalyzer() {
         if (!raw.trim()) {
 
           throw new Error(
-            "Paste a raw email first."
+            "Paste a raw email first.",
           );
         }
 
-        const response =
-          await ingestRaw(
-            raw
-          );
-
         setResult(
-          response
+          await ingestRaw(
+            raw,
+          ),
         );
       }
 
-    } catch (error: any) {
+    } catch (e: any) {
 
       setError(
-        error?.response?.data?.detail
+        e?.response?.data?.detail
         ||
-        error?.message
+        e?.message
         ||
-        "Email ingestion failed."
+        "Email ingestion failed.",
       );
 
     } finally {
@@ -173,77 +166,118 @@ export default function EmailAnalyzer() {
     }
   };
 
+  const runHeaders = async () => {
 
-  const runHeaderAnalysis =
-    async () => {
+    if (!result)
+      return;
 
-      if (!result) {
-        return;
-      }
+    setError("");
 
-      setError("");
+    setHeaderLoading(true);
 
-      setAnalyzing(true);
+    try {
 
-      try {
-
-        const response =
-          await analyzeHeaders(
-            result.evidence_id
-          );
-
-        setForensicResult(
-          response.header_forensics
+      const response =
+        await analyzeHeaders(
+          result.evidence_id,
         );
 
-      } catch (error: any) {
+      setHeaders(
+        response.header_forensics,
+      );
 
-        setError(
-          error?.response?.data?.detail
-          ||
-          error?.message
-          ||
-          "Header analysis failed."
+      setIntelligence(null);
+
+    } catch (e: any) {
+
+      setError(
+        e?.response?.data?.detail
+        ||
+        e?.message
+        ||
+        "Header forensics analysis failed.",
+      );
+
+    } finally {
+
+      setHeaderLoading(false);
+    }
+  };
+
+  const runIntelligence = async () => {
+
+    if (!result)
+      return;
+
+    setError("");
+
+    setIntelLoading(true);
+
+    try {
+
+      const response =
+        await analyzeIntelligence(
+          result.evidence_id,
         );
 
-      } finally {
+      setIntelligence(
+        response.intelligence,
+      );
 
-        setAnalyzing(false);
-      }
-    };
+    } catch (e: any) {
+
+      setError(
+        e?.response?.data?.detail
+        ||
+        e?.message
+        ||
+        "IP and sender intelligence analysis failed.",
+      );
+
+    } finally {
+
+      setIntelLoading(false);
+    }
+  };
 
 
   return (
-
     <section className="analyzer">
+
+      {/* ==================================================
+          HEADER
+      ================================================== */}
 
       <div className="section-head">
 
         <div>
 
           <p className="eyebrow">
-            PHASE 1 + PHASE 2
+            PHASE 1 → 2 → 3 • EMAIL FORENSICS
           </p>
 
           <h2>
-            Email Evidence Analysis
+            Analyze email evidence
           </h2>
 
           <p>
-            Ingest an email, preserve its
-            evidence fingerprint, then
-            perform header-level forensic
-            analysis.
+            Ingest the sample, inspect
+            authentication and routing headers,
+            then enrich observed infrastructure
+            with passive IP and sender-domain
+            intelligence.
           </p>
 
         </div>
 
-        <ShieldCheck
-          size={30}
-        />
+        <ShieldCheck size={30} />
 
       </div>
 
+
+      {/* ==================================================
+          INPUT TABS
+      ================================================== */}
 
       <div className="tabs">
 
@@ -253,13 +287,9 @@ export default function EmailAnalyzer() {
               ? "active"
               : ""
           }
-          onClick={() => {
-
-            setMode("upload");
-
-            setError("");
-
-          }}
+          onClick={() =>
+            setMode("upload")
+          }
         >
 
           <Upload size={16} />
@@ -275,18 +305,12 @@ export default function EmailAnalyzer() {
               ? "active"
               : ""
           }
-          onClick={() => {
-
-            setMode("raw");
-
-            setError("");
-
-          }}
+          onClick={() =>
+            setMode("raw")
+          }
         >
 
-          <FileText
-            size={16}
-          />
+          <FileText size={16} />
 
           Raw Email
 
@@ -295,38 +319,39 @@ export default function EmailAnalyzer() {
       </div>
 
 
+      {/* ==================================================
+          UPLOAD
+      ================================================== */}
+
       {mode === "upload" ? (
 
         <div
           className="drop"
           onClick={() =>
-            inputRef.current?.click()
+            ref.current?.click()
           }
         >
 
           <input
-            ref={inputRef}
+            ref={ref}
             hidden
             type="file"
             accept=".eml,message/rfc822"
-            onChange={
-              chooseFile
-            }
+            onChange={choose}
           />
 
           <Upload size={34} />
 
           <strong>
-
-            {file
-              ? file.name
-              : "Choose an .eml evidence file"}
-
+            {
+              file
+                ? file.name
+                : "Choose an .eml evidence file"
+            }
           </strong>
 
           <span>
-            Maximum 15 MB
-            • attachments are never executed
+            Maximum 15 MB • attachments are never executed
           </span>
 
         </div>
@@ -336,33 +361,28 @@ export default function EmailAnalyzer() {
         <textarea
           className="raw"
           value={raw}
-          onChange={(event) =>
+          onChange={(e) =>
             setRaw(
-              event.target.value
+              e.target.value,
             )
           }
           spellCheck={false}
-          placeholder={
-`From: security@example.com
+          placeholder={`From: security@example.com
 To: analyst@example.org
-Reply-To: attacker@example.net
-Subject: Urgent Account Notice
+Subject: Example
 Date: Fri, 11 Sep 2026 10:00:00 +0530
-Message-ID: <abc@example.com>
-Received: from mail.example.com (mail.example.com [203.0.113.10])
-    by mx.example.org with ESMTP id ABC123;
-    Fri, 11 Sep 2026 10:00:00 +0530
-Authentication-Results: mx.example.org;
-    spf=fail smtp.mailfrom=example.net;
-    dkim=fail;
-    dmarc=fail header.from=example.com
+Message-ID: <example@example.com>
+Content-Type: text/plain; charset="UTF-8"
 
-Paste complete raw email here...`
-          }
+Paste complete raw email here...`}
         />
 
       )}
 
+
+      {/* ==================================================
+          INGEST
+      ================================================== */}
 
       <button
         className="primary"
@@ -372,20 +392,24 @@ Paste complete raw email here...`
 
         <Mail size={18} />
 
-        {loading
-          ? "Ingesting evidence..."
-          : "Ingest Email"}
+        {
+          loading
+            ? "Ingesting evidence..."
+            : "Ingest Email"
+        }
 
       </button>
 
+
+      {/* ==================================================
+          ERROR
+      ================================================== */}
 
       {error && (
 
         <div className="error">
 
-          <AlertTriangle
-            size={17}
-          />
+          <AlertTriangle size={17} />
 
           {error}
 
@@ -394,18 +418,21 @@ Paste complete raw email here...`
       )}
 
 
+      {/* ==================================================
+          RESULT
+      ================================================== */}
+
       {result && (
 
         <ResultView
           result={result}
-          forensicResult={
-            forensicResult
-          }
-          analyzing={
-            analyzing
-          }
-          onAnalyzeHeaders={
-            runHeaderAnalysis
+          headers={headers}
+          intelligence={intelligence}
+          headerLoading={headerLoading}
+          intelLoading={intelLoading}
+          onRunHeaders={runHeaders}
+          onRunIntelligence={
+            runIntelligence
           }
         />
 
@@ -418,31 +445,41 @@ Paste complete raw email here...`
 
 function ResultView({
   result,
-  forensicResult,
-  analyzing,
-  onAnalyzeHeaders,
+  headers,
+  intelligence,
+  headerLoading,
+  intelLoading,
+  onRunHeaders,
+  onRunIntelligence,
 }: {
-  result: EmailResult;
+  result: Result;
 
-  forensicResult:
+  headers:
     HeaderForensics | null;
 
-  analyzing: boolean;
+  intelligence:
+    EmailIntelligence | null;
 
-  onAnalyzeHeaders:
-    () => void;
+  headerLoading: boolean;
 
+  intelLoading: boolean;
+
+  onRunHeaders: () => void;
+
+  onRunIntelligence: () => void;
 }) {
 
   return (
 
     <div className="result">
 
+      {/* ==================================================
+          EVIDENCE SUCCESS
+      ================================================== */}
+
       <div className="success">
 
-        <CheckCircle2
-          size={19}
-        />
+        <CheckCircle2 size={19} />
 
         Evidence ingested
 
@@ -452,6 +489,10 @@ function ResultView({
 
       </div>
 
+
+      {/* ==================================================
+          HASH
+      ================================================== */}
 
       <div className="hash">
 
@@ -465,6 +506,10 @@ function ResultView({
 
       </div>
 
+
+      {/* ==================================================
+          METADATA
+      ================================================== */}
 
       <div className="grid">
 
@@ -480,7 +525,7 @@ function ResultView({
           label="From"
           value={
             addresses(
-              result.metadata.from
+              result.metadata.from,
             )
             || "—"
           }
@@ -490,17 +535,7 @@ function ResultView({
           label="To"
           value={
             addresses(
-              result.metadata.to
-            )
-            || "—"
-          }
-        />
-
-        <Item
-          label="Reply-To"
-          value={
-            addresses(
-              result.metadata.replyTo
+              result.metadata.to,
             )
             || "—"
           }
@@ -522,178 +557,256 @@ function ResultView({
           }
         />
 
+        <Item
+          label="Size"
+          value={
+            bytes(
+              result.metadata.size_bytes,
+            )
+          }
+        />
+
       </div>
 
+
+      {/* ==================================================
+          ATTACHMENTS + URLS
+      ================================================== */}
 
       <div className="two">
 
         <Panel
-          title={`Attachments (${result.attachments.length})`}
+          title={
+            `Attachments (${result.attachments.length})`
+          }
           icon={
-            <Paperclip size={17}/>
+            <Paperclip size={17} />
           }
         >
 
-          {result.attachments.length
-            ? result.attachments.map(
-                attachment => (
+          {
+            result.attachments.length
+              ? result.attachments.map(
+                  (a) => (
 
-                  <div
-                    className="row"
-                    key={
-                      attachment.sha256
-                    }
-                  >
+                    <div
+                      className="row"
+                      key={a.sha256}
+                    >
 
-                    <div>
+                      <div>
 
-                      <b>
-                        {attachment.filename}
-                      </b>
+                        <b>
+                          {a.filename}
+                        </b>
 
-                      <small>
+                        <small>
+                          {
+                            a.content_type
+                            || "unknown"
+                          }
+
+                          {" • "}
+
+                          {
+                            bytes(
+                              a.size_bytes,
+                            )
+                          }
+                        </small>
+
+                      </div>
+
+                      <code>
                         {
-                          attachment.content_type
-                          || "unknown"
-                        }
-
-                        {" • "}
-
-                        {
-                          formatBytes(
-                            attachment.size_bytes
+                          a.sha256.slice(
+                            0,
+                            16,
                           )
                         }
-
-                      </small>
+                        …
+                      </code>
 
                     </div>
 
-                    <code>
-                      {
-                        attachment.sha256
-                          .slice(0, 16)
-                      }…
-                    </code>
-
-                  </div>
-
+                  ),
                 )
+
+              : (
+                <p className="muted">
+                  No attachments detected.
+                </p>
               )
-
-            : (
-
-              <p className="muted">
-                No attachments detected.
-              </p>
-
-            )}
+          }
 
         </Panel>
 
 
         <Panel
-          title={`URLs (${result.urls.length})`}
+          title={
+            `URLs (${result.urls.length})`
+          }
           icon={
-            <Link2 size={17}/>
+            <Link2 size={17} />
           }
         >
 
-          {result.urls.length
-            ? result.urls.map(
-                url => (
+          {
+            result.urls.length
+              ? result.urls.map(
+                  (u) => (
 
-                  <div
-                    className="url"
-                    key={url.url}
-                  >
+                    <div
+                      className="url"
+                      key={u.url}
+                    >
 
-                    <b>
-                      {url.hostname}
-                    </b>
+                      <b>
+                        {u.hostname}
+                      </b>
 
-                    <span>
-                      {url.url}
-                    </span>
+                      <span>
+                        {u.url}
+                      </span>
 
-                  </div>
+                    </div>
 
+                  ),
                 )
+
+              : (
+                <p className="muted">
+                  No URLs detected.
+                </p>
               )
-
-            : (
-
-              <p className="muted">
-                No URLs detected.
-              </p>
-
-            )}
+          }
 
         </Panel>
 
       </div>
 
 
-      <button
-        className="forensic-button"
-        onClick={
-          onAnalyzeHeaders
-        }
-        disabled={analyzing}
-      >
+      {/* ==================================================
+          BODY
+      ================================================== */}
 
-        <Search size={18}/>
+      {
+        result.body_preview && (
 
-        {analyzing
-          ? "Analyzing headers..."
-          : "Run Phase 2 Header Forensics"}
+          <div className="body">
 
-      </button>
+            <h3>
+              Body Preview
+            </h3>
+
+            <p>
+              {result.body_preview}
+            </p>
+
+          </div>
+
+        )
+      }
 
 
-      {forensicResult && (
+      {/* ==================================================
+          PHASE ACTIONS
+      ================================================== */}
 
-        <HeaderForensicsView
-          result={
-            forensicResult
+      <div className="phase-actions">
+
+        <button
+          className="secondary-action"
+          onClick={
+            onRunHeaders
           }
-        />
+          disabled={
+            headerLoading
+          }
+        >
 
-      )}
+          <Search size={17} />
+
+          {
+            headerLoading
+              ? "Running Header Forensics..."
+              : "Run Phase 2 Header Forensics"
+          }
+
+        </button>
 
 
-      {result.body_preview && (
+        <button
+          className="secondary-action intel-action"
+          onClick={
+            onRunIntelligence
+          }
+          disabled={
+            intelLoading
+            || !headers
+          }
+          title={
+            !headers
+              ? "Run Phase 2 Header Forensics first"
+              : "Enrich observed IPs and sender domains"
+          }
+        >
 
-        <div className="body">
+          <Network size={17} />
 
-          <h3>
-            Body Preview
-          </h3>
+          {
+            intelLoading
+              ? "Enriching Intelligence..."
+              : "Run Phase 3 IP & Sender Intelligence"
+          }
 
-          <p>
-            {result.body_preview}
-          </p>
+        </button>
 
-        </div>
+      </div>
 
-      )}
+
+      {/* ==================================================
+          PHASE 2
+      ================================================== */}
+
+      {
+        headers && (
+          <HeaderForensicsView
+            data={headers}
+          />
+        )
+      }
+
+
+      {/* ==================================================
+          PHASE 3
+      ================================================== */}
+
+      {
+        intelligence && (
+          <IntelligenceView
+            data={
+              intelligence
+            }
+          />
+        )
+      }
 
     </div>
   );
 }
 
-
 function HeaderForensicsView({
-  result,
+  data,
 }: {
-  result: HeaderForensics;
+  data: HeaderForensics;
 }) {
 
   return (
 
     <div className="forensics">
 
-      <div className="forensics-header">
+      <div className="forensics-head">
 
         <div>
 
@@ -702,14 +815,12 @@ function HeaderForensicsView({
           </p>
 
           <h3>
-            Header Investigation
+            Routing & authentication evidence
           </h3>
 
         </div>
 
-        <ShieldCheck
-          size={24}
-        />
+        <ShieldAlert size={23} />
 
       </div>
 
@@ -718,35 +829,20 @@ function HeaderForensicsView({
 
         <AuthCard
           label="SPF"
-          value={
-            result.spf_result
-            || "not detected"
-          }
-          domain={
-            result.spf_domain
-          }
+          value={data.spf_result}
+          domain={data.spf_domain}
         />
 
         <AuthCard
           label="DKIM"
-          value={
-            result.dkim_result
-            || "not detected"
-          }
-          domain={
-            result.dkim_domain
-          }
+          value={data.dkim_result}
+          domain={data.dkim_domain}
         />
 
         <AuthCard
           label="DMARC"
-          value={
-            result.dmarc_result
-            || "not detected"
-          }
-          domain={
-            result.dmarc_domain
-          }
+          value={data.dmarc_result}
+          domain={data.dmarc_domain}
         />
 
       </div>
@@ -754,29 +850,29 @@ function HeaderForensicsView({
 
       <div className="route-summary">
 
-        <Summary
-          label="Relay Hops"
+        <Metric
+          label="Relays"
           value={
             String(
-              result.relay_count
+              data.relay_count,
             )
           }
         />
 
-        <Summary
+        <Metric
           label="Public IPs"
           value={
             String(
-              result.public_ip_count
+              data.public_ip_count,
             )
           }
         />
 
-        <Summary
+        <Metric
           label="Private IPs"
           value={
             String(
-              result.private_ip_count
+              data.private_ip_count,
             )
           }
         />
@@ -786,240 +882,1037 @@ function HeaderForensicsView({
 
       <div className="identity-grid">
 
-        <Item
-          label="From Domain"
+        <Identity
+          label="From"
           value={
-            result.from_domain
-            || "—"
+            data.from_address
           }
         />
 
-        <Item
-          label="Reply-To Domain"
+        <Identity
+          label="Reply-To"
           value={
-            result.reply_to_domain
-            || "—"
+            data.reply_to_address
           }
         />
 
-        <Item
-          label="Return-Path Domain"
+        <Identity
+          label="Return-Path"
           value={
-            result.return_path_domain
-            || "—"
+            data.return_path
           }
         />
 
-        <Item
-          label="DKIM Domain"
+        <Identity
+          label="DKIM domain"
           value={
-            result.dkim_domain
-            || "—"
+            data.dkim_domain
           }
         />
 
-        <Item
-          label="SPF Domain"
+        <Identity
+          label="SPF domain"
           value={
-            result.spf_domain
-            || "—"
+            data.spf_domain
           }
         />
 
-        <Item
-          label="Message-ID Domain"
+        <Identity
+          label="Message-ID domain"
           value={
-            result.message_id_domain
-            || "—"
+            data.message_id_domain
           }
         />
 
       </div>
 
 
-      <div className="panel">
+      {/* RECEIVED CHAIN */}
 
-        <h3>
-          Received Chain
-        </h3>
+      <div className="forensic-block">
 
-        {result.received_hops.map(
-          hop => (
+        <h4>
+          <Activity size={16} />
 
-            <div
-              className="hop"
-              key={
-                hop.hop_number
-              }
-            >
+          Received chain
 
-              <div className="hop-number">
-                {hop.hop_number}
-              </div>
+        </h4>
 
-              <div className="hop-content">
+        {
+          data.received_hops.length
+            ? data.received_hops.map(
+                (hop) => (
 
-                <strong>
-                  {hop.from_host
-                    || "Unknown source"}
-                </strong>
+                  <div
+                    className="hop"
+                    key={
+                      `${hop.hop_number}-${hop.raw}`
+                    }
+                  >
 
-                <span>
+                    <div className="hop-number">
+                      {hop.hop_number}
+                    </div>
 
-                  {hop.from_ip
-                    || "No source IP"}
+                    <div>
 
-                  {" → "}
+                      <b>
+                        {
+                          hop.from_host
+                          || "unknown"
+                        }
 
-                  {hop.by_host
-                    || "Unknown destination"}
+                        {" → "}
 
-                </span>
+                        {
+                          hop.by_host
+                          || "unknown"
+                        }
+                      </b>
 
-                <small>
+                      <span>
 
-                  {hop.protocol
-                    || "Unknown protocol"}
+                        {
+                          hop.from_ip
+                          || "no source IP"
+                        }
 
-                  {" • "}
+                        {
+                          hop.protocol
+                            ? ` • ${hop.protocol}`
+                            : ""
+                        }
 
-                  {hop.timestamp
-                    || "No timestamp"}
+                        {
+                          hop.timestamp
+                            ? ` • ${hop.timestamp}`
+                            : ""
+                        }
 
-                </small>
+                      </span>
 
-              </div>
+                    </div>
 
-              <div
-                className={
-                  hop.is_public_ip
-                    ? "ip-badge public"
-                    : hop.is_private_ip
-                      ? "ip-badge private"
-                      : "ip-badge"
+                  </div>
+
+                ),
+              )
+
+            : (
+              <p className="muted">
+                No Received headers were parsed.
+              </p>
+            )
+        }
+
+      </div>
+
+
+      {/* FINDINGS */}
+
+      <div className="forensic-block">
+
+        <h4>
+
+          <ShieldAlert size={16} />
+
+          Findings
+
+        </h4>
+
+        {
+          data.findings.length
+            ? data.findings.map(
+                (finding) => (
+
+                  <div
+                    className={
+                      `finding ${finding.severity}`
+                    }
+                    key={
+                      `${finding.code}-${finding.title}`
+                    }
+                  >
+
+                    <div>
+
+                      <b>
+                        {finding.title}
+                      </b>
+
+                      <span>
+                        {
+                          finding.description
+                        }
+                      </span>
+
+                    </div>
+
+                    <small>
+                      {
+                        finding.severity
+                          .toUpperCase()
+                      }
+                    </small>
+
+                  </div>
+
+                ),
+              )
+
+            : (
+              <p className="muted">
+                No Phase 2 findings were generated.
+              </p>
+            )
+        }
+
+      </div>
+
+
+      {/* AUTH RESULTS */}
+
+      {
+        data.authentication_results.length > 0 && (
+
+          <div className="forensic-block">
+
+            <h4>
+
+              <CircleDot size={16} />
+
+              Authentication-Results
+
+            </h4>
+
+            {
+              data.authentication_results.map(
+                (
+                  auth,
+                  index,
+                ) => (
+
+                  <div
+                    className="auth-row"
+                    key={
+                      `${auth.service}-${auth.method}-${index}`
+                    }
+                  >
+
+                    <b>
+                      {
+                        auth.method
+                        || auth.service
+                        || "authentication"
+                      }
+                    </b>
+
+                    <span>
+                      {
+                        auth.result
+                        || "unknown"
+                      }
+                    </span>
+
+                    <code>
+                      {
+                        auth.domain
+                        || "—"
+                      }
+                    </code>
+
+                  </div>
+
+                ),
+              )
+            }
+
+          </div>
+
+        )
+      }
+
+    </div>
+  );
+}
+
+
+function IntelligenceView({
+  data,
+}: {
+  data: EmailIntelligence;
+}) {
+
+  const threat =
+    data.threat_assessment;
+
+
+  return (
+
+    <div className="intel-shell">
+
+      {/* ==================================================
+          HEADER
+      ================================================== */}
+
+      <div className="intel-head">
+
+        <div>
+
+          <p className="eyebrow">
+            PHASE 3 • IP & SENDER INTELLIGENCE
+          </p>
+
+          <h3>
+            Infrastructure intelligence
+          </h3>
+
+          <p>
+            Passive enrichment of observed
+            relay IPs and sender-related domains.
+            No email URL is opened and no
+            attachment is executed.
+          </p>
+
+        </div>
+
+        <Network size={24} />
+
+      </div>
+
+
+      {/* ==================================================
+          THREAT
+      ================================================== */}
+
+      <div className="intel-threat">
+
+        <div>
+
+          <span>
+            INTELLIGENCE TRIAGE
+          </span>
+
+          <strong>
+            {
+              threat.score == null
+                ? "UNRATED"
+                : threat.score
+            }
+          </strong>
+
+        </div>
+
+
+        <div
+          className={
+            `intel-level ${threat.level}`
+          }
+        >
+
+          {
+            threat.level.toUpperCase()
+          }
+
+        </div>
+
+
+        <p>
+          {threat.disclaimer}
+        </p>
+
+      </div>
+
+
+      {/* ==================================================
+          SUMMARY
+      ================================================== */}
+
+      <div className="intel-summary-grid">
+
+        <IntelMetric
+          icon={
+            <Globe2 size={17} />
+          }
+          label="Public IPs"
+          value={
+            String(
+              data.summary.public_ip_count,
+            )
+          }
+        />
+
+        <IntelMetric
+          icon={
+            <Server size={17} />
+          }
+          label="Private IPs"
+          value={
+            String(
+              data.summary.private_ip_count,
+            )
+          }
+        />
+
+        <IntelMetric
+          icon={
+            <MapPin size={17} />
+          }
+          label="Countries"
+          value={
+            String(
+              data.summary.countries.length,
+            )
+          }
+        />
+
+        <IntelMetric
+          icon={
+            <Building2 size={17} />
+          }
+          label="ASNs"
+          value={
+            String(
+              data.summary.asns.length,
+            )
+          }
+        />
+
+      </div>
+
+
+      {/* COUNTRIES */}
+
+      {
+        data.summary.countries.length > 0 && (
+
+          <div className="intel-chip-row">
+
+            {
+              data.summary.countries.map(
+                (country) => (
+
+                  <span
+                    key={country}
+                  >
+                    {country}
+                  </span>
+
+                ),
+              )
+            }
+
+          </div>
+
+        )
+      }
+
+
+      {/* ==================================================
+          IP INTELLIGENCE
+      ================================================== */}
+
+      <div className="intel-block">
+
+        <div className="intel-block-title">
+
+          <h4>
+
+            <MapPin size={16} />
+
+            Observed IP intelligence
+
+          </h4>
+
+          <small>
+            {
+              data.source_ips.length
+            } indicators
+          </small>
+
+        </div>
+
+
+        {
+          data.source_ips.length
+
+            ? (
+
+              <div className="intel-ip-list">
+
+                {
+                  data.source_ips.map(
+                    (ip) => (
+
+                      <IPCard
+                        key={ip.ip}
+                        ip={ip}
+                      />
+
+                    ),
+                  )
                 }
-              >
-
-                {hop.is_public_ip
-                  ? "PUBLIC"
-                  : hop.is_private_ip
-                    ? "PRIVATE"
-                    : "UNKNOWN"}
 
               </div>
+
+            )
+
+            : (
+
+              <p className="muted">
+                No IP indicators were available
+                from the Phase 2 Received chain.
+              </p>
+
+            )
+        }
+
+      </div>
+
+
+      {/* ==================================================
+          DOMAIN INTELLIGENCE
+      ================================================== */}
+
+      <div className="intel-block">
+
+        <div className="intel-block-title">
+
+          <h4>
+
+            <Globe2 size={16} />
+
+            Sender domain intelligence
+
+          </h4>
+
+          <small>
+            {
+              data.sender_domains.length
+            } domains
+          </small>
+
+        </div>
+
+
+        {
+          data.sender_domains.length
+
+            ? (
+
+              <div className="intel-domain-list">
+
+                {
+                  data.sender_domains.map(
+                    (domain) => (
+
+                      <DomainCard
+                        key={
+                          domain.domain
+                        }
+                        domain={
+                          domain
+                        }
+                      />
+
+                    ),
+                  )
+                }
+
+              </div>
+
+            )
+
+            : (
+
+              <p className="muted">
+                No valid sender-related domains
+                were available.
+              </p>
+
+            )
+        }
+
+      </div>
+
+
+      {/* ==================================================
+          INVESTIGATION LEADS
+      ================================================== */}
+
+      {
+        (
+          data.summary.high_risk_ips.length
+          > 0
+          ||
+          data.summary.suspicious_domains.length
+          > 0
+        ) && (
+
+          <div className="intel-alert">
+
+            <AlertTriangle size={17} />
+
+            <div>
+
+              <b>
+                Investigation leads detected
+              </b>
+
+              {
+                data.summary.high_risk_ips.length
+                > 0 && (
+
+                  <span>
+                    High-reputation-risk IPs:
+                    {" "}
+                    {
+                      data.summary.high_risk_ips.join(
+                        ", ",
+                      )
+                    }
+                  </span>
+
+                )
+              }
+
+              {
+                data.summary.suspicious_domains.length
+                > 0 && (
+
+                  <span>
+                    Domains missing expected DNS
+                    records:
+                    {" "}
+                    {
+                      data.summary.suspicious_domains.join(
+                        ", ",
+                      )
+                    }
+                  </span>
+
+                )
+              }
 
             </div>
 
-          )
-        )}
-
-      </div>
-
-
-      <div className="panel">
-
-        <h3>
-          Forensic Findings
-        </h3>
-
-        {result.findings.length === 0 ? (
-
-          <div className="clean">
-            No header anomalies detected.
           </div>
 
-        ) : (
+        )
+      }
 
-          result.findings.map(
-            finding => (
 
-              <div
+      {/* ==================================================
+          PROVIDER NOTES
+      ================================================== */}
+
+      <div className="intel-notes">
+
+        {
+          data.provider_notes.map(
+            (note) => (
+
+              <span
+                key={note}
+              >
+                • {note}
+              </span>
+
+            ),
+          )
+        }
+
+      </div>
+
+    </div>
+  );
+}
+
+function IPCard({
+  ip,
+}: {
+  ip: IPIntelligence;
+}) {
+
+  const score =
+    ip.abuse_confidence_score;
+
+
+  const scoreClass =
+    score == null
+      ? "unknown"
+      : score >= 75
+        ? "critical"
+        : score >= 50
+          ? "high"
+          : score >= 25
+            ? "medium"
+            : "low";
+
+
+  return (
+
+    <div className="intel-ip-card">
+
+      <div className="intel-ip-top">
+
+        <div>
+
+          <code>
+            {ip.ip}
+          </code>
+
+          <span
+            className={
+              `scope-pill ${ip.scope}`
+            }
+          >
+            {
+              ip.scope.replace(
+                "_",
+                " ",
+              )
+            }
+          </span>
+
+        </div>
+
+
+        {
+          score != null
+
+            ? (
+
+              <strong
                 className={
-                  `finding ${finding.severity}`
+                  `abuse-score ${scoreClass}`
                 }
-                key={
-                  finding.code
+              >
+                {score}/100
+              </strong>
+
+            )
+
+            : (
+
+              <strong className="abuse-score unknown">
+                unrated
+              </strong>
+
+            )
+        }
+
+      </div>
+
+
+      <div className="intel-detail-grid">
+
+        <Detail
+          label="Reverse DNS"
+          value={
+            ip.reverse_dns
+          }
+        />
+
+        <Detail
+          label="Country"
+          value={
+            ip.country
+              ? `${ip.country}${
+                  ip.country_code
+                    ? ` (${ip.country_code})`
+                    : ""
+                }`
+              : null
+          }
+        />
+
+        <Detail
+          label="ASN"
+          value={
+            ip.asn
+              ? `${ip.asn}${
+                  ip.as_name
+                    ? ` • ${ip.as_name}`
+                    : ""
+                }`
+              : null
+          }
+        />
+
+        <Detail
+          label="AS Domain"
+          value={
+            ip.as_domain
+          }
+        />
+
+        <Detail
+          label="Usage"
+          value={
+            ip.abuse_usage_type
+          }
+        />
+
+        <Detail
+          label="ISP"
+          value={
+            ip.abuse_isp
+          }
+        />
+
+        <Detail
+          label="Reports"
+          value={
+            ip.abuse_total_reports != null
+              ? String(
+                  ip.abuse_total_reports,
+                )
+              : null
+          }
+        />
+
+        <Detail
+          label="Last Report"
+          value={
+            ip.abuse_last_reported_at
+          }
+        />
+
+      </div>
+
+
+      <div className="provider-row">
+
+        {
+          Object.entries(
+            ip.provider_status,
+          ).map(
+            (
+              [
+                name,
+                status,
+              ],
+            ) => (
+
+              <span
+                key={name}
+                className={
+                  status === "ok"
+                    ? "ok"
+                    : "muted-provider"
                 }
               >
 
-                <div>
+                {name}: {status}
 
-                  <strong>
-                    {finding.title}
-                  </strong>
+              </span>
 
-                  <span>
-                    {finding.description}
+            ),
+          )
+        }
+
+      </div>
+
+    </div>
+  );
+}
+
+function DomainCard({
+  domain,
+}: {
+  domain: SenderDomainIntelligence;
+}) {
+
+  return (
+
+    <div className="intel-domain-card">
+
+      <div className="domain-title">
+
+        <div>
+
+          <code>
+            {domain.domain}
+          </code>
+
+          <div className="role-row">
+
+            {
+              domain.roles.map(
+                (role) => (
+
+                  <span
+                    key={role}
+                  >
+                    {role}
                   </span>
 
-                </div>
+                ),
+              )
+            }
 
-                <b>
-                  {finding.severity.toUpperCase()}
-                </b>
+          </div>
 
-              </div>
+        </div>
+
+
+        <div className="dns-state">
+
+          <DnsFlag
+            label="MX"
+            value={
+              domain.has_mx
+            }
+          />
+
+          <DnsFlag
+            label="SPF"
+            value={
+              domain.has_spf
+            }
+          />
+
+          <DnsFlag
+            label="DMARC"
+            value={
+              domain.has_dmarc
+            }
+          />
+
+          {
+            domain.dkim_record && (
+
+              <DnsFlag
+                label="DKIM"
+                value={
+                  domain.has_dkim_selector
+                }
+              />
 
             )
-          )
+          }
 
-        )}
+        </div>
 
       </div>
 
 
-      <div className="panel">
+      <div className="domain-record-grid">
 
-        <h3>
-          Authentication Results
-        </h3>
+        <RecordList
+          label="A"
+          values={
+            domain.a_records
+          }
+        />
 
-        {result.authentication_results.length === 0 ? (
+        <RecordList
+          label="AAAA"
+          values={
+            domain.aaaa_records
+          }
+        />
 
-          <p className="muted">
-            No Authentication-Results
-            headers detected.
-          </p>
+        <RecordList
+          label="MX"
+          values={
+            domain.mx_records
+          }
+        />
 
-        ) : (
+        <RecordList
+          label="NS"
+          values={
+            domain.ns_records
+          }
+        />
 
-          result.authentication_results.map(
-            (auth, index) => (
+        <RecordList
+          label="SPF"
+          values={
+            domain.spf_records
+          }
+        />
 
-              <div
-                className="auth-row"
-                key={`${auth.method}-${index}`}
-              >
-
-                <strong>
-                  {
-                    auth.method
-                    || "unknown"
-                  }
-                </strong>
-
-                <span>
-                  {
-                    auth.result
-                    || "unknown"
-                  }
-                </span>
-
-                <small>
-                  {
-                    auth.domain
-                    || "domain unavailable"
-                  }
-                </small>
-
-              </div>
-
-            )
-          )
-
-        )}
+        <RecordList
+          label="DMARC"
+          values={
+            domain.dmarc_records
+          }
+        />
 
       </div>
+
+    </div>
+  );
+}
+
+
+/* ========================================================
+   DNS FLAG
+======================================================== */
+
+function DnsFlag({
+  label,
+  value,
+}: {
+  label: string;
+  value: boolean;
+}) {
+
+  return (
+
+    <span
+      className={
+        value
+          ? "dns-good"
+          : "dns-missing"
+      }
+    >
+      {label}
+    </span>
+
+  );
+}
+
+function RecordList({
+  label,
+  values,
+}: {
+  label: string;
+  values: string[];
+}) {
+
+  return (
+
+    <div className="record-list">
+
+      <small>
+        {label}
+      </small>
+
+      {
+        values.length
+
+          ? values.map(
+              (value) => (
+
+                <code
+                  key={value}
+                >
+                  {value}
+                </code>
+
+              ),
+            )
+
+          : (
+            <span>
+              none
+            </span>
+          )
+      }
 
     </div>
   );
@@ -1032,19 +1925,20 @@ function AuthCard({
   domain,
 }: {
   label: string;
-  value: string;
+
+  value?: string | null;
+
   domain?: string | null;
 }) {
 
   const normalized =
-    value.toLowerCase();
+    (
+      value
+      || "unknown"
+    ).toLowerCase();
 
-  const failed =
-    normalized.includes(
-      "fail"
-    );
 
-  const passed =
+  const good =
     normalized === "pass";
 
 
@@ -1053,33 +1947,42 @@ function AuthCard({
     <div
       className={
         `auth-card ${
-          failed
-            ? "failed"
-            : passed
-              ? "passed"
-              : ""
+          good
+            ? "pass"
+            : normalized === "unknown"
+              ? "unknown"
+              : "fail"
         }`
       }
     >
 
+      <div>
+
+        <b>
+          {label}
+        </b>
+
+        <strong>
+          {
+            value
+            || "unknown"
+          }
+        </strong>
+
+      </div>
+
       <small>
-        {label}
+        {
+          domain
+          || "domain unavailable"
+        }
       </small>
-
-      <strong>
-        {value}
-      </strong>
-
-      <span>
-        {domain || "—"}
-      </span>
 
     </div>
   );
 }
 
-
-function Summary({
+function Metric({
   label,
   value,
 }: {
@@ -1089,20 +1992,107 @@ function Summary({
 
   return (
 
-    <div className="summary">
+    <div className="metric">
 
       <small>
         {label}
       </small>
 
-      <strong>
+      <b>
         {value}
-      </strong>
+      </b>
 
     </div>
   );
 }
 
+
+function Identity({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+
+  return (
+
+    <div className="identity">
+
+      <small>
+        {label}
+      </small>
+
+      <span>
+        {
+          value
+          || "—"
+        }
+      </span>
+
+    </div>
+  );
+}
+
+function IntelMetric({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+
+  label: string;
+
+  value: string;
+}) {
+
+  return (
+
+    <div className="intel-metric">
+
+      <span>
+
+        {icon}
+
+        {label}
+
+      </span>
+
+      <b>
+        {value}
+      </b>
+
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+
+  value?: string | null;
+}) {
+
+  return (
+
+    <div className="intel-detail">
+
+      <small>
+        {label}
+      </small>
+
+      <span>
+        {
+          value
+          || "—"
+        }
+      </span>
+
+    </div>
+  );
+}
 
 function Item({
   label,
@@ -1135,7 +2125,9 @@ function Panel({
   children,
 }: {
   title: string;
+
   icon: React.ReactNode;
+
   children: React.ReactNode;
 }) {
 
@@ -1156,21 +2148,19 @@ function Panel({
 
 
 function addresses(
-  values: {
+  a: {
     display_name?: string | null;
     address?: string | null;
-  }[]
+  }[],
 ) {
 
-  return values
+  return a
 
     .map(
-      item =>
-        item.display_name
-          ? `${item.display_name} <${
-              item.address || ""
-            }>`
-          : item.address || ""
+      (x) =>
+        x.display_name
+          ? `${x.display_name} <${x.address || ""}>`
+          : x.address || "",
     )
 
     .filter(Boolean)
@@ -1179,36 +2169,21 @@ function addresses(
 }
 
 
-function formatBytes(
-  bytes: number
+function bytes(
+  n: number,
 ) {
 
-  if (bytes < 1024) {
+  return n < 1024
 
-    return `${bytes} B`;
+    ? `${n} B`
 
-  }
+    : n < 1048576
 
-  if (
-    bytes <
-    1024 * 1024
-  ) {
+      ? `${(
+          n / 1024
+        ).toFixed(1)} KB`
 
-    return `${
-      (bytes / 1024)
-        .toFixed(1)
-    } KB`;
-
-  }
-
-  return `${
-    (bytes /
-      (1024 * 1024)
-    ).toFixed(2)
-  } MB`;
-}
-
-
-function HopPlaceholder() {
-  return null;
+      : `${(
+          n / 1048576
+        ).toFixed(2)} MB`;
 }

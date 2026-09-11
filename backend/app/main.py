@@ -12,18 +12,18 @@ from app.api.routes.health import (
     router as health_router,
 )
 
-from app.core.config import (
-    settings,
-)
+from app.core.config import settings
 
 from app.core.database import (
-    connect_to_mongo,
     close_mongo_connection,
+    connect_to_mongo,
 )
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(
+    app: FastAPI,
+):
 
     await connect_to_mongo()
 
@@ -31,49 +31,47 @@ async def lifespan(app: FastAPI):
 
     await close_mongo_connection()
 
+
 app = FastAPI(
-
     title=settings.app_name,
-
-    version="0.3.0",
-
+    version="0.4.0",
     description=(
-        "PhishingTrack - "
-        "Email Threat Detection "
-        "and Forensic Intelligence"
+        "PhishingTrack Phase 3 - "
+        "IP and Sender Intelligence"
     ),
-
     lifespan=lifespan,
 )
+
 
 app.add_middleware(
     CORSMiddleware,
 
-    allow_origins=
-        settings.cors_origin_list,
+    allow_origins=(
+        settings.cors_origin_list
+    ),
 
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+
+    allow_methods=[
+        "*"
+    ],
+
+    allow_headers=[
+        "*"
+    ],
 )
+
 
 @app.get("/")
 async def root():
 
     return {
-
-        "name":
-            "PhishingTrack API",
-
-        "version":
-            "0.3.0",
-
-        "status":
-            "online",
-
-        "phase":
-            "Phase 2 - Header Forensics",
+        "name": "PhishingTrack API",
+        "version": "0.4.0",
+        "status": "online",
+        "phase": "Phase 3",
     }
+
 
 app.include_router(
     health_router,

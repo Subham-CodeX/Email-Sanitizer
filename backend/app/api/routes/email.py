@@ -5,8 +5,13 @@ from fastapi import (
     UploadFile,
 )
 
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+)
+
 from app.core.config import settings
+
 from app.core.database import (
     get_database,
 )
@@ -14,6 +19,14 @@ from app.core.database import (
 from app.schemas.email import (
     EmailIngestionResponse,
     HeaderForensicsResponse,
+)
+
+from app.schemas.intelligence import (
+    EmailIntelligenceResponse,
+)
+
+from app.services.email_intelligence import (
+    analyze_email_intelligence,
 )
 
 from app.services.email_parser import (
@@ -24,13 +37,17 @@ from app.services.evidence_service import (
     save_evidence,
 )
 
+# Phase 2
 from app.services.header_forensics import (
     analyze_headers,
 )
 
+
 router = APIRouter(
     prefix="/emails",
-    tags=["Email Ingestion"],
+    tags=[
+        "Email Ingestion & Intelligence"
+    ],
 )
 
 class RawEmailRequest(BaseModel):
@@ -41,6 +58,7 @@ class RawEmailRequest(BaseModel):
     )
 
     filename: str | None = None
+
 
 @router.post(
     "/ingest/eml",
@@ -60,11 +78,8 @@ async def ingest_eml(
     ):
 
         raise HTTPException(
-            status_code=400,
-            detail=(
-                "Only .eml files "
-                "are accepted."
-            ),
+            400,
+            "Only .eml files are accepted.",
         )
 
     raw = await file.read()
@@ -72,17 +87,14 @@ async def ingest_eml(
     if not raw:
 
         raise HTTPException(
-            status_code=400,
-            detail=(
-                "The .eml file "
-                "is empty."
-            ),
+            400,
+            "The .eml file is empty.",
         )
 
-    return await process_email(
-        raw=raw,
-        input_type="eml",
-        filename=filename,
+    return await _process(
+        raw,
+        "eml",
+        filename,
     )
 
 @router.post(
@@ -97,13 +109,13 @@ async def ingest_raw(
         "utf-8"
     )
 
-    return await process_email(
-        raw=raw,
-        input_type="raw_email",
-        filename=payload.filename,
+    return await _process(
+        raw,
+        "raw_email",
+        payload.filename,
     )
 
-async def process_email(
+async def _process(
     raw,
     input_type,
     filename,
@@ -112,8 +124,8 @@ async def process_email(
     if len(raw) > settings.max_email_size_bytes:
 
         raise HTTPException(
-            status_code=413,
-            detail=(
+            413,
+            (
                 f"Email exceeds "
                 f"{settings.max_email_size_mb} MB."
             ),
@@ -126,57 +138,47 @@ async def process_email(
         )
 
         return await save_evidence(
-            raw=raw,
-            input_type=input_type,
-            filename=filename,
-            parsed=parsed,
+            raw,
+            input_type,
+            filename,
+            parsed,
         )
 
     except ValueError as exc:
 
         raise HTTPException(
-            status_code=400,
-            detail=str(exc),
+            400,
+            str(exc),
         ) from exc
 
     except Exception as exc:
 
         raise HTTPException(
-            status_code=500,
-            detail=(
-                "Email ingestion failed: "
-                f"{exc}"
-            ),
+            500,
+            f"Email ingestion failed: {exc}",
         ) from exc
 
-
 @router.get(
-    "/evidence/{evidence_id}",
+    "/evidence/{evidence_id}"
 )
 async def get_evidence(
     evidence_id: str,
 ):
 
-    document = await get_database()[
-        "email_evidence"
-    ].find_one(
+    doc = await get_database().email_evidence.find_one(
         {
-            "evidence_id":
-                evidence_id
+            "evidence_id": evidence_id
         },
         {
             "_id": 0
         },
     )
 
-    if not document:
+    if not doc:
 
         raise HTTPException(
-            status_code=404,
-            detail=(
-                "Evidence record "
-                "not found."
-            ),
+            404,
+            "Evidence record not found.",
         )
 
     for field in (
@@ -184,14 +186,14 @@ async def get_evidence(
         "created_at",
     ):
 
-        if document.get(field):
+        if doc.get(field):
 
-            document[field] = (
-                document[field]
+            doc[field] = (
+                doc[field]
                 .isoformat()
             )
 
-    return document
+    return doc
 
 @router.get(
     "/evidence/{evidence_id}/headers",
@@ -201,26 +203,20 @@ async def analyze_email_headers(
     evidence_id: str,
 ):
 
-    document = await get_database()[
-        "email_evidence"
-    ].find_one(
+    document = await get_database().email_evidence.find_one(
         {
-            "evidence_id":
-                evidence_id
+            "evidence_id": evidence_id
         },
         {
-            "_id": 0,
+            "_id": 0
         },
     )
 
     if not document:
 
         raise HTTPException(
-            status_code=404,
-            detail=(
-                "Evidence record "
-                "not found."
-            ),
+            404,
+            "Evidence record not found.",
         )
 
     raw_headers = document.get(
@@ -230,14 +226,12 @@ async def analyze_email_headers(
     if not raw_headers:
 
         raise HTTPException(
-            status_code=422,
-            detail=(
-                "Raw headers are not "
-                "available for this "
-                "evidence record. "
-                "Re-ingest the email "
-                "with the Phase 2 "
-                "ingestion parser."
+            422,
+            (
+                "Raw headers are not available "
+                "for this evidence record. "
+                "Re-ingest the email with the "
+                "Phase 2 ingestion parser."
             ),
         )
 
@@ -248,36 +242,110 @@ async def analyze_email_headers(
             raw_headers=raw_headers,
         )
 
-        await get_database()[
-            "email_evidence"
-        ].update_one(
-            {
-                "evidence_id":
-                    evidence_id
-            },
-            {
-                "$set": {
-                    "header_forensics":
-                        result.model_dump(),
-                    "phase_2":
-                        "header_forensics",
-                }
-            },
+    except Exception as exc:
+
+        raise HTTPException(
+            422,
+            (
+                "Header forensics analysis failed: "
+                f"{exc}"
+            ),
+        ) from exc
+
+    await get_database().email_evidence.update_one(
+        {
+            "evidence_id": evidence_id
+        },
+        {
+            "$set": {
+                "header_forensics": (
+                    result.model_dump()
+                ),
+                "phase_2": (
+                    "header_forensics"
+                ),
+            }
+        },
+    )
+
+    return {
+        "evidence_id": evidence_id,
+        "header_forensics": result,
+    }
+
+@router.get(
+    "/evidence/{evidence_id}/intelligence",
+    response_model=EmailIntelligenceResponse,
+)
+async def analyze_email_intelligence_route(
+    evidence_id: str,
+):
+
+    document = await get_database().email_evidence.find_one(
+        {
+            "evidence_id": evidence_id
+        },
+        {
+            "_id": 0
+        },
+    )
+
+    if not document:
+
+        raise HTTPException(
+            404,
+            "Evidence record not found.",
         )
 
-        return {
-            "evidence_id":
-                evidence_id,
-            "header_forensics":
-                result,
-        }
+    header_forensics = document.get(
+        "header_forensics"
+    )
+
+    if not header_forensics:
+
+        raise HTTPException(
+            422,
+            (
+                "Phase 2 header forensics are "
+                "not available. Run Phase 2 "
+                "Header Forensics first."
+            ),
+        )
+
+    try:
+
+        result = await analyze_email_intelligence(
+            evidence_id=evidence_id,
+            header_forensics=header_forensics,
+        )
 
     except Exception as exc:
 
         raise HTTPException(
-            status_code=500,
-            detail=(
-                "Header analysis failed: "
-                f"{exc}"
+            502,
+            (
+                "Phase 3 intelligence enrichment "
+                f"failed: {exc}"
             ),
         ) from exc
+
+    await get_database().email_evidence.update_one(
+        {
+            "evidence_id": evidence_id
+        },
+        {
+            "$set": {
+                "intelligence": (
+                    result.model_dump()
+                ),
+                "phase_3": (
+                    "ip_sender_intelligence"
+                ),
+            }
+        },
+    )
+
+    return {
+        "evidence_id": evidence_id,
+        "intelligence": result,
+    }

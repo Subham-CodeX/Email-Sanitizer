@@ -1,4 +1,7 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import {
   Activity,
@@ -19,8 +22,9 @@ export default function App() {
   const [
     health,
     setHealth,
-  ] = useState<any>(null);
-
+  ] = useState<any>(
+    null,
+  );
 
   const [
     error,
@@ -33,30 +37,34 @@ export default function App() {
     getHealth()
 
       .then(
-        setHealth
+        setHealth,
       )
 
       .catch(
         () =>
           setError(
-            "Unable to connect to the PhishingTrack backend."
-          )
+            "Unable to connect to the PhishingTrack backend.",
+          ),
       );
 
   }, []);
 
 
-  const backendConnected =
+  const ok =
     health?.status === "ok";
 
-
-  const databaseConnected =
-    health?.database === "connected";
+  const db =
+    health?.database ===
+    "connected";
 
 
   return (
 
     <main className="app">
+
+      {/* ==================================================
+          NAV
+      ================================================== */}
 
       <nav>
 
@@ -86,41 +94,44 @@ export default function App() {
 
 
         <div className="badge">
-          PHASE 2
+          PHASE 3
         </div>
 
       </nav>
 
+
+      {/* ==================================================
+          HERO
+      ================================================== */}
 
       <section className="hero">
 
         <div>
 
           <p className="eyebrow">
-            EMAIL SECURITY • FORENSICS •
-            THREAT INTELLIGENCE
+            EMAIL SECURITY • FORENSICS • INTELLIGENCE
           </p>
 
           <h1>
 
-            Follow the trail.
+            Ingest the evidence.
 
             <br />
 
             <span>
-              Find the anomaly.
+              Build the investigation.
             </span>
 
           </h1>
 
           <p className="desc">
 
-            Phase 2 performs forensic
-            analysis of email headers,
-            including Received chains,
-            SPF, DKIM, DMARC, sender
-            identity correlation and
-            routing anomalies.
+            Phase 3 enriches the
+            infrastructure discovered
+            in Phase 2 with passive
+            IP geolocation, ASN,
+            reverse DNS, abuse reputation
+            and sender-domain DNS intelligence.
 
           </p>
 
@@ -131,9 +142,7 @@ export default function App() {
 
           <h3>
 
-            <Activity
-              size={18}
-            />
+            <Activity size={18} />
 
             System Status
 
@@ -142,33 +151,29 @@ export default function App() {
 
           <Status
             icon={
-              <Server size={17}/>
+              <Server size={17} />
             }
             label="FastAPI Backend"
             value={
-              backendConnected
+              ok
                 ? "Connected"
                 : "Offline"
             }
-            good={
-              backendConnected
-            }
+            good={ok}
           />
 
 
           <Status
             icon={
-              <Database size={17}/>
+              <Database size={17} />
             }
             label="MongoDB"
             value={
-              databaseConnected
+              db
                 ? "Connected"
                 : "Offline"
             }
-            good={
-              databaseConnected
-            }
+            good={db}
           />
 
         </div>
@@ -176,26 +181,32 @@ export default function App() {
       </section>
 
 
-      {error && (
+      {/* ERROR */}
 
-        <div className="error">
-          {error}
-        </div>
+      {
+        error && (
+          <div className="error">
+            {error}
+          </div>
+        )
+      }
 
-      )}
 
+      {/* ANALYZER */}
 
       <EmailAnalyzer />
 
 
+      {/* FOOTER */}
+
       <footer>
 
         <span>
-          PhishingTrack v0.3.0
+          PhishingTrack v0.4.0
         </span>
 
         <span>
-          Phase 2 — Header Forensics
+          Phase 3 — IP & Sender Intelligence
         </span>
 
       </footer>
@@ -203,7 +214,6 @@ export default function App() {
     </main>
   );
 }
-
 
 function Status({
   icon,
@@ -218,7 +228,6 @@ function Status({
   value: string;
 
   good: boolean;
-
 }) {
 
   return (
@@ -232,6 +241,7 @@ function Status({
         {label}
 
       </span>
+
 
       <b
         className={
