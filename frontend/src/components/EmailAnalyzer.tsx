@@ -1,4 +1,8 @@
-import { ChangeEvent, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  useRef,
+  useState,
+} from "react";
 
 import {
   AlertTriangle,
@@ -7,318 +11,1098 @@ import {
   Link2,
   Mail,
   Paperclip,
+  Search,
   ShieldCheck,
   Upload,
 } from "lucide-react";
 
 import {
+  analyzeHeaders,
+  EmailResult,
+  HeaderForensics,
   ingestEml,
   ingestRaw,
-  Result,
 } from "../services/api";
 
+
 export default function EmailAnalyzer() {
-  const [mode, setMode] = useState<"upload" | "raw">("upload");
-  const [file, setFile] = useState<File | null>(null);
-  const [raw, setRaw] = useState("");
-  const [result, setResult] = useState<Result | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const ref = useRef<HTMLInputElement>(null);
+  const [
+    mode,
+    setMode,
+  ] = useState<
+    "upload" | "raw"
+  >("upload");
 
-  /* -----------------------------------------
-     File Selection
-  ----------------------------------------- */
 
-  const choose = (e: ChangeEvent<HTMLInputElement>) => {
-    setFile(e.target.files?.[0] ?? null);
+  const [
+    file,
+    setFile,
+  ] = useState<File | null>(
+    null
+  );
+
+
+  const [
+    raw,
+    setRaw,
+  ] = useState("");
+
+
+  const [
+    result,
+    setResult,
+  ] = useState<EmailResult | null>(
+    null
+  );
+
+
+  const [
+    forensicResult,
+    setForensicResult,
+  ] = useState<
+    HeaderForensics | null
+  >(null);
+
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
+
+
+  const [
+    analyzing,
+    setAnalyzing,
+  ] = useState(false);
+
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+
+  const inputRef =
+    useRef<HTMLInputElement>(
+      null
+    );
+
+
+  const chooseFile = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+
+    setFile(
+      event.target.files?.[0]
+      ?? null
+    );
+
     setResult(null);
+
+    setForensicResult(
+      null
+    );
+
     setError("");
   };
 
-  /* -----------------------------------------
-     Email Submission
-  ----------------------------------------- */
 
   const submit = async () => {
+
     setError("");
+
     setResult(null);
+
+    setForensicResult(null);
+
     setLoading(true);
 
     try {
+
       if (mode === "upload") {
+
         if (!file) {
-          throw new Error("Select an .eml file first.");
+
+          throw new Error(
+            "Select an .eml file first."
+          );
         }
 
-        setResult(await ingestEml(file));
+        const response =
+          await ingestEml(
+            file
+          );
+
+        setResult(
+          response
+        );
+
       } else {
+
         if (!raw.trim()) {
-          throw new Error("Paste a raw email first.");
+
+          throw new Error(
+            "Paste a raw email first."
+          );
         }
 
-        setResult(await ingestRaw(raw));
+        const response =
+          await ingestRaw(
+            raw
+          );
+
+        setResult(
+          response
+        );
       }
-    } catch (e: any) {
+
+    } catch (error: any) {
+
       setError(
-        e?.response?.data?.detail ||
-          e?.message ||
-          "Email ingestion failed."
+        error?.response?.data?.detail
+        ||
+        error?.message
+        ||
+        "Email ingestion failed."
       );
+
     } finally {
+
       setLoading(false);
     }
   };
 
-  /* -----------------------------------------
-     Render
-  ----------------------------------------- */
+
+  const runHeaderAnalysis =
+    async () => {
+
+      if (!result) {
+        return;
+      }
+
+      setError("");
+
+      setAnalyzing(true);
+
+      try {
+
+        const response =
+          await analyzeHeaders(
+            result.evidence_id
+          );
+
+        setForensicResult(
+          response.header_forensics
+        );
+
+      } catch (error: any) {
+
+        setError(
+          error?.response?.data?.detail
+          ||
+          error?.message
+          ||
+          "Header analysis failed."
+        );
+
+      } finally {
+
+        setAnalyzing(false);
+      }
+    };
+
 
   return (
+
     <section className="analyzer">
 
-      {/* Section Header */}
       <div className="section-head">
+
         <div>
+
           <p className="eyebrow">
-            PHASE 1 • EMAIL INGESTION
+            PHASE 1 + PHASE 2
           </p>
 
-          <h2>Analyze email evidence</h2>
+          <h2>
+            Email Evidence Analysis
+          </h2>
 
           <p>
-            Parse headers, body, MIME parts, attachments and
-            URLs. Every sample receives a SHA-256 evidence
-            fingerprint.
+            Ingest an email, preserve its
+            evidence fingerprint, then
+            perform header-level forensic
+            analysis.
           </p>
+
         </div>
 
-        <ShieldCheck size={30} />
+        <ShieldCheck
+          size={30}
+        />
+
       </div>
 
-      {/* Input Mode Tabs */}
+
       <div className="tabs">
-        <button
-          className={mode === "upload" ? "active" : ""}
-          onClick={() => setMode("upload")}
-        >
-          <Upload size={16} />
-          Upload .eml
-        </button>
 
         <button
-          className={mode === "raw" ? "active" : ""}
-          onClick={() => setMode("raw")}
+          className={
+            mode === "upload"
+              ? "active"
+              : ""
+          }
+          onClick={() => {
+
+            setMode("upload");
+
+            setError("");
+
+          }}
         >
-          <FileText size={16} />
-          Raw Email
+
+          <Upload size={16} />
+
+          Upload .eml
+
         </button>
+
+
+        <button
+          className={
+            mode === "raw"
+              ? "active"
+              : ""
+          }
+          onClick={() => {
+
+            setMode("raw");
+
+            setError("");
+
+          }}
+        >
+
+          <FileText
+            size={16}
+          />
+
+          Raw Email
+
+        </button>
+
       </div>
 
-      {/* Email Input */}
+
       {mode === "upload" ? (
+
         <div
           className="drop"
-          onClick={() => ref.current?.click()}
+          onClick={() =>
+            inputRef.current?.click()
+          }
         >
+
           <input
-            ref={ref}
+            ref={inputRef}
             hidden
             type="file"
             accept=".eml,message/rfc822"
-            onChange={choose}
+            onChange={
+              chooseFile
+            }
           />
 
           <Upload size={34} />
 
           <strong>
+
             {file
               ? file.name
               : "Choose an .eml evidence file"}
+
           </strong>
 
           <span>
-            Maximum 15 MB • attachments are never executed
+            Maximum 15 MB
+            • attachments are never executed
           </span>
+
         </div>
+
       ) : (
+
         <textarea
           className="raw"
           value={raw}
-          onChange={(e) => setRaw(e.target.value)}
+          onChange={(event) =>
+            setRaw(
+              event.target.value
+            )
+          }
           spellCheck={false}
-          placeholder={`From: security@example.com
+          placeholder={
+`From: security@example.com
 To: analyst@example.org
-Subject: Example
+Reply-To: attacker@example.net
+Subject: Urgent Account Notice
 Date: Fri, 11 Sep 2026 10:00:00 +0530
-Message-ID: <example@example.com>
-Content-Type: text/plain; charset="UTF-8"
+Message-ID: <abc@example.com>
+Received: from mail.example.com (mail.example.com [203.0.113.10])
+    by mx.example.org with ESMTP id ABC123;
+    Fri, 11 Sep 2026 10:00:00 +0530
+Authentication-Results: mx.example.org;
+    spf=fail smtp.mailfrom=example.net;
+    dkim=fail;
+    dmarc=fail header.from=example.com
 
-Paste complete raw email here...`}
+Paste complete raw email here...`
+          }
         />
+
       )}
 
-      {/* Submit Button */}
+
       <button
         className="primary"
         onClick={submit}
         disabled={loading}
       >
+
         <Mail size={18} />
 
         {loading
           ? "Ingesting evidence..."
           : "Ingest Email"}
+
       </button>
 
-      {/* Error */}
+
       {error && (
+
         <div className="error">
-          <AlertTriangle size={17} />
+
+          <AlertTriangle
+            size={17}
+          />
+
           {error}
+
         </div>
+
       )}
 
-      {/* Result */}
-      {result && <ResultView result={result} />}
+
+      {result && (
+
+        <ResultView
+          result={result}
+          forensicResult={
+            forensicResult
+          }
+          analyzing={
+            analyzing
+          }
+          onAnalyzeHeaders={
+            runHeaderAnalysis
+          }
+        />
+
+      )}
+
     </section>
   );
 }
 
-/* =========================================
-   RESULT VIEW
-========================================= */
 
-function ResultView({ result }: { result: Result }) {
+function ResultView({
+  result,
+  forensicResult,
+  analyzing,
+  onAnalyzeHeaders,
+}: {
+  result: EmailResult;
+
+  forensicResult:
+    HeaderForensics | null;
+
+  analyzing: boolean;
+
+  onAnalyzeHeaders:
+    () => void;
+
+}) {
+
   return (
+
     <div className="result">
 
-      {/* Success */}
       <div className="success">
-        <CheckCircle2 size={19} />
+
+        <CheckCircle2
+          size={19}
+        />
 
         Evidence ingested
 
-        <span>{result.evidence_id}</span>
+        <span>
+          {result.evidence_id}
+        </span>
+
       </div>
 
-      {/* SHA-256 Evidence Hash */}
+
       <div className="hash">
+
         <small>
           SHA-256 EVIDENCE FINGERPRINT
         </small>
 
-        <code>{result.evidence_sha256}</code>
+        <code>
+          {result.evidence_sha256}
+        </code>
+
       </div>
 
-      {/* Metadata Grid */}
+
       <div className="grid">
+
         <Item
           label="Subject"
-          value={result.metadata.subject || "—"}
+          value={
+            result.metadata.subject
+            || "—"
+          }
         />
 
         <Item
           label="From"
-          value={addresses(result.metadata.from) || "—"}
+          value={
+            addresses(
+              result.metadata.from
+            )
+            || "—"
+          }
         />
 
         <Item
           label="To"
-          value={addresses(result.metadata.to) || "—"}
+          value={
+            addresses(
+              result.metadata.to
+            )
+            || "—"
+          }
+        />
+
+        <Item
+          label="Reply-To"
+          value={
+            addresses(
+              result.metadata.replyTo
+            )
+            || "—"
+          }
         />
 
         <Item
           label="Message-ID"
-          value={result.metadata.message_id || "—"}
+          value={
+            result.metadata.message_id
+            || "—"
+          }
         />
 
         <Item
           label="MIME"
-          value={result.metadata.mime_type || "—"}
+          value={
+            result.metadata.mime_type
+            || "—"
+          }
         />
 
-        <Item
-          label="Size"
-          value={bytes(result.metadata.size_bytes)}
-        />
       </div>
 
-      {/* Attachments + URLs */}
+
       <div className="two">
 
-        {/* Attachments */}
         <Panel
           title={`Attachments (${result.attachments.length})`}
-          icon={<Paperclip size={17} />}
+          icon={
+            <Paperclip size={17}/>
+          }
         >
-          {result.attachments.length ? (
-            result.attachments.map((a) => (
-              <div
-                className="row"
-                key={a.sha256}
-              >
-                <div>
-                  <b>{a.filename}</b>
 
-                  <small>
-                    {a.content_type || "unknown"} •{" "}
-                    {bytes(a.size_bytes)}
-                  </small>
-                </div>
+          {result.attachments.length
+            ? result.attachments.map(
+                attachment => (
 
-                <code>
-                  {a.sha256.slice(0, 16)}…
-                </code>
-              </div>
-            ))
-          ) : (
-            <p className="muted">
-              No attachments detected.
-            </p>
-          )}
+                  <div
+                    className="row"
+                    key={
+                      attachment.sha256
+                    }
+                  >
+
+                    <div>
+
+                      <b>
+                        {attachment.filename}
+                      </b>
+
+                      <small>
+                        {
+                          attachment.content_type
+                          || "unknown"
+                        }
+
+                        {" • "}
+
+                        {
+                          formatBytes(
+                            attachment.size_bytes
+                          )
+                        }
+
+                      </small>
+
+                    </div>
+
+                    <code>
+                      {
+                        attachment.sha256
+                          .slice(0, 16)
+                      }…
+                    </code>
+
+                  </div>
+
+                )
+              )
+
+            : (
+
+              <p className="muted">
+                No attachments detected.
+              </p>
+
+            )}
+
         </Panel>
 
-        {/* URLs */}
+
         <Panel
           title={`URLs (${result.urls.length})`}
-          icon={<Link2 size={17} />}
+          icon={
+            <Link2 size={17}/>
+          }
         >
-          {result.urls.length ? (
-            result.urls.map((u) => (
-              <div
-                className="url"
-                key={u.url}
-              >
-                <b>{u.hostname}</b>
 
-                <span>{u.url}</span>
-              </div>
-            ))
-          ) : (
-            <p className="muted">
-              No URLs detected.
-            </p>
-          )}
+          {result.urls.length
+            ? result.urls.map(
+                url => (
+
+                  <div
+                    className="url"
+                    key={url.url}
+                  >
+
+                    <b>
+                      {url.hostname}
+                    </b>
+
+                    <span>
+                      {url.url}
+                    </span>
+
+                  </div>
+
+                )
+              )
+
+            : (
+
+              <p className="muted">
+                No URLs detected.
+              </p>
+
+            )}
+
         </Panel>
+
       </div>
 
-      {/* Body Preview */}
-      {result.body_preview && (
-        <div className="body">
-          <h3>Body Preview</h3>
 
-          <p>{result.body_preview}</p>
-        </div>
+      <button
+        className="forensic-button"
+        onClick={
+          onAnalyzeHeaders
+        }
+        disabled={analyzing}
+      >
+
+        <Search size={18}/>
+
+        {analyzing
+          ? "Analyzing headers..."
+          : "Run Phase 2 Header Forensics"}
+
+      </button>
+
+
+      {forensicResult && (
+
+        <HeaderForensicsView
+          result={
+            forensicResult
+          }
+        />
+
       )}
+
+
+      {result.body_preview && (
+
+        <div className="body">
+
+          <h3>
+            Body Preview
+          </h3>
+
+          <p>
+            {result.body_preview}
+          </p>
+
+        </div>
+
+      )}
+
     </div>
   );
 }
 
-/* =========================================
-   METADATA ITEM
-========================================= */
+
+function HeaderForensicsView({
+  result,
+}: {
+  result: HeaderForensics;
+}) {
+
+  return (
+
+    <div className="forensics">
+
+      <div className="forensics-header">
+
+        <div>
+
+          <p className="eyebrow">
+            PHASE 2 • HEADER FORENSICS
+          </p>
+
+          <h3>
+            Header Investigation
+          </h3>
+
+        </div>
+
+        <ShieldCheck
+          size={24}
+        />
+
+      </div>
+
+
+      <div className="auth-grid">
+
+        <AuthCard
+          label="SPF"
+          value={
+            result.spf_result
+            || "not detected"
+          }
+          domain={
+            result.spf_domain
+          }
+        />
+
+        <AuthCard
+          label="DKIM"
+          value={
+            result.dkim_result
+            || "not detected"
+          }
+          domain={
+            result.dkim_domain
+          }
+        />
+
+        <AuthCard
+          label="DMARC"
+          value={
+            result.dmarc_result
+            || "not detected"
+          }
+          domain={
+            result.dmarc_domain
+          }
+        />
+
+      </div>
+
+
+      <div className="route-summary">
+
+        <Summary
+          label="Relay Hops"
+          value={
+            String(
+              result.relay_count
+            )
+          }
+        />
+
+        <Summary
+          label="Public IPs"
+          value={
+            String(
+              result.public_ip_count
+            )
+          }
+        />
+
+        <Summary
+          label="Private IPs"
+          value={
+            String(
+              result.private_ip_count
+            )
+          }
+        />
+
+      </div>
+
+
+      <div className="identity-grid">
+
+        <Item
+          label="From Domain"
+          value={
+            result.from_domain
+            || "—"
+          }
+        />
+
+        <Item
+          label="Reply-To Domain"
+          value={
+            result.reply_to_domain
+            || "—"
+          }
+        />
+
+        <Item
+          label="Return-Path Domain"
+          value={
+            result.return_path_domain
+            || "—"
+          }
+        />
+
+        <Item
+          label="DKIM Domain"
+          value={
+            result.dkim_domain
+            || "—"
+          }
+        />
+
+        <Item
+          label="SPF Domain"
+          value={
+            result.spf_domain
+            || "—"
+          }
+        />
+
+        <Item
+          label="Message-ID Domain"
+          value={
+            result.message_id_domain
+            || "—"
+          }
+        />
+
+      </div>
+
+
+      <div className="panel">
+
+        <h3>
+          Received Chain
+        </h3>
+
+        {result.received_hops.map(
+          hop => (
+
+            <div
+              className="hop"
+              key={
+                hop.hop_number
+              }
+            >
+
+              <div className="hop-number">
+                {hop.hop_number}
+              </div>
+
+              <div className="hop-content">
+
+                <strong>
+                  {hop.from_host
+                    || "Unknown source"}
+                </strong>
+
+                <span>
+
+                  {hop.from_ip
+                    || "No source IP"}
+
+                  {" → "}
+
+                  {hop.by_host
+                    || "Unknown destination"}
+
+                </span>
+
+                <small>
+
+                  {hop.protocol
+                    || "Unknown protocol"}
+
+                  {" • "}
+
+                  {hop.timestamp
+                    || "No timestamp"}
+
+                </small>
+
+              </div>
+
+              <div
+                className={
+                  hop.is_public_ip
+                    ? "ip-badge public"
+                    : hop.is_private_ip
+                      ? "ip-badge private"
+                      : "ip-badge"
+                }
+              >
+
+                {hop.is_public_ip
+                  ? "PUBLIC"
+                  : hop.is_private_ip
+                    ? "PRIVATE"
+                    : "UNKNOWN"}
+
+              </div>
+
+            </div>
+
+          )
+        )}
+
+      </div>
+
+
+      <div className="panel">
+
+        <h3>
+          Forensic Findings
+        </h3>
+
+        {result.findings.length === 0 ? (
+
+          <div className="clean">
+            No header anomalies detected.
+          </div>
+
+        ) : (
+
+          result.findings.map(
+            finding => (
+
+              <div
+                className={
+                  `finding ${finding.severity}`
+                }
+                key={
+                  finding.code
+                }
+              >
+
+                <div>
+
+                  <strong>
+                    {finding.title}
+                  </strong>
+
+                  <span>
+                    {finding.description}
+                  </span>
+
+                </div>
+
+                <b>
+                  {finding.severity.toUpperCase()}
+                </b>
+
+              </div>
+
+            )
+          )
+
+        )}
+
+      </div>
+
+
+      <div className="panel">
+
+        <h3>
+          Authentication Results
+        </h3>
+
+        {result.authentication_results.length === 0 ? (
+
+          <p className="muted">
+            No Authentication-Results
+            headers detected.
+          </p>
+
+        ) : (
+
+          result.authentication_results.map(
+            (auth, index) => (
+
+              <div
+                className="auth-row"
+                key={`${auth.method}-${index}`}
+              >
+
+                <strong>
+                  {
+                    auth.method
+                    || "unknown"
+                  }
+                </strong>
+
+                <span>
+                  {
+                    auth.result
+                    || "unknown"
+                  }
+                </span>
+
+                <small>
+                  {
+                    auth.domain
+                    || "domain unavailable"
+                  }
+                </small>
+
+              </div>
+
+            )
+          )
+
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+function AuthCard({
+  label,
+  value,
+  domain,
+}: {
+  label: string;
+  value: string;
+  domain?: string | null;
+}) {
+
+  const normalized =
+    value.toLowerCase();
+
+  const failed =
+    normalized.includes(
+      "fail"
+    );
+
+  const passed =
+    normalized === "pass";
+
+
+  return (
+
+    <div
+      className={
+        `auth-card ${
+          failed
+            ? "failed"
+            : passed
+              ? "passed"
+              : ""
+        }`
+      }
+    >
+
+      <small>
+        {label}
+      </small>
+
+      <strong>
+        {value}
+      </strong>
+
+      <span>
+        {domain || "—"}
+      </span>
+
+    </div>
+  );
+}
+
+
+function Summary({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+
+  return (
+
+    <div className="summary">
+
+      <small>
+        {label}
+      </small>
+
+      <strong>
+        {value}
+      </strong>
+
+    </div>
+  );
+}
+
 
 function Item({
   label,
@@ -327,18 +1111,23 @@ function Item({
   label: string;
   value: string;
 }) {
-  return (
-    <div className="item">
-      <small>{label}</small>
 
-      <span>{value}</span>
+  return (
+
+    <div className="item">
+
+      <small>
+        {label}
+      </small>
+
+      <span>
+        {value}
+      </span>
+
     </div>
   );
 }
 
-/* =========================================
-   PANEL
-========================================= */
 
 function Panel({
   title,
@@ -349,50 +1138,77 @@ function Panel({
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
+
   return (
+
     <div className="panel">
+
       <h3>
         {icon}
         {title}
       </h3>
 
       {children}
+
     </div>
   );
 }
 
-/* =========================================
-   ADDRESS FORMATTER
-========================================= */
 
 function addresses(
-  a: {
+  values: {
     display_name?: string | null;
     address?: string | null;
   }[]
 ) {
-  return a
-    .map((x) =>
-      x.display_name
-        ? `${x.display_name} <${x.address || ""}>`
-        : x.address || ""
+
+  return values
+
+    .map(
+      item =>
+        item.display_name
+          ? `${item.display_name} <${
+              item.address || ""
+            }>`
+          : item.address || ""
     )
+
     .filter(Boolean)
+
     .join(", ");
 }
 
-/* =========================================
-   BYTE FORMATTER
-========================================= */
 
-function bytes(n: number) {
-  if (n < 1024) {
-    return `${n} B`;
+function formatBytes(
+  bytes: number
+) {
+
+  if (bytes < 1024) {
+
+    return `${bytes} B`;
+
   }
 
-  if (n < 1048576) {
-    return `${(n / 1024).toFixed(1)} KB`;
+  if (
+    bytes <
+    1024 * 1024
+  ) {
+
+    return `${
+      (bytes / 1024)
+        .toFixed(1)
+    } KB`;
+
   }
 
-  return `${(n / 1048576).toFixed(2)} MB`;
+  return `${
+    (bytes /
+      (1024 * 1024)
+    ).toFixed(2)
+  } MB`;
+}
+
+
+function HopPlaceholder() {
+  return null;
 }
