@@ -94,7 +94,7 @@ export default function App() {
 
 
         <div className="badge">
-          PHASE 3
+          PHASE 4
         </div>
 
       </nav>
@@ -202,11 +202,11 @@ export default function App() {
       <footer>
 
         <span>
-          PhishingTrack v0.4.0
+          PhishingTrack v0.5.0
         </span>
 
         <span>
-          Phase 3 — IP & Sender Intelligence
+          Phase 4 — URL & Domain Intelligence
         </span>
 
       </footer>

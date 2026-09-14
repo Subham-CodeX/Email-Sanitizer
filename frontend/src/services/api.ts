@@ -391,3 +391,239 @@ export async function analyzeIntelligence(
     )
   ).data;
 }
+
+//PHASE 4 — URL STRUCTURE
+
+export type URLStructure = {
+  original_url: string;
+
+  normalized_url?: string | null;
+
+  scheme?: string | null;
+
+  hostname?: string | null;
+
+  registrable_domain?: string | null;
+
+  port?: number | null;
+
+  path?: string | null;
+
+  query?: string | null;
+
+  fragment_present: boolean;
+
+  username_present: boolean;
+
+  password_present: boolean;
+
+  is_ip_host: boolean;
+
+  ip_version?: number | null;
+
+  is_punycode: boolean;
+
+  contains_unicode: boolean;
+
+  is_shortener: boolean;
+
+  is_https: boolean;
+
+  is_http: boolean;
+
+  is_non_standard_port: boolean;
+
+  suspicious_tokens: string[];
+
+  structural_findings: string[];
+};
+
+export type URLDNSIntelligence = {
+  domain: string;
+
+  a_records: string[];
+
+  aaaa_records: string[];
+
+  mx_records: string[];
+
+  ns_records: string[];
+
+  txt_records: string[];
+
+  spf_records: string[];
+
+  dmarc_records: string[];
+
+  has_a: boolean;
+
+  has_aaaa: boolean;
+
+  has_mx: boolean;
+
+  has_spf: boolean;
+
+  has_dmarc: boolean;
+
+  errors: string[];
+};
+
+
+export type DomainRegistrationIntelligence = {
+  domain: string;
+
+  rdap_available: boolean;
+
+  registrar_name?: string | null;
+
+  registrar_iana_id?: string | null;
+
+  registration_date?: string | null;
+
+  last_changed_date?: string | null;
+
+  expiration_date?: string | null;
+
+  registration_age_days?: number | null;
+
+  domain_status: string[];
+
+  nameservers: string[];
+
+  errors: string[];
+};
+
+export type URLReputation = {
+  provider: string;
+
+  checked: boolean;
+
+  malicious: boolean;
+
+  threat_types: string[];
+
+  expires_at?: string | null;
+
+  error?: string | null;
+};
+
+
+export type URLFinding = {
+  severity:
+    | "info"
+    | "low"
+    | "medium"
+    | "high"
+    | "critical";
+
+  code: string;
+
+  title: string;
+
+  description: string;
+
+  evidence?: string | null;
+};
+
+
+export type URLIntelligence = {
+  url_id: string;
+
+  original_url: string;
+
+  structure: URLStructure;
+
+  dns?: URLDNSIntelligence | null;
+
+  registration?:
+    DomainRegistrationIntelligence | null;
+
+  reputation: URLReputation[];
+
+  findings: URLFinding[];
+
+  score?: number | null;
+
+  level:
+    | "unknown"
+    | "low"
+    | "medium"
+    | "high"
+    | "critical";
+};
+
+export type URLDomainSummary = {
+  domain: string;
+
+  url_count: number;
+
+  url_ids: string[];
+
+  registration_age_days?: number | null;
+
+  countries_not_available: boolean;
+
+  has_spf?: boolean | null;
+
+  has_dmarc?: boolean | null;
+
+  has_mx?: boolean | null;
+};
+
+export type URLIntelligenceSummary = {
+  total_urls: number;
+
+  analyzed_urls: number;
+
+  unique_domains: number;
+
+  malicious_urls: number;
+
+  suspicious_urls: number;
+
+  high_risk_urls: string[];
+
+  suspicious_domains: string[];
+
+  shortener_urls: number;
+
+  punycode_urls: number;
+
+  ip_host_urls: number;
+};
+
+
+export type URLIntelligenceResult = {
+  evidence_id: string;
+
+  phase:
+    "phase_4_url_domain_intelligence";
+
+  analyzed_at: string;
+
+  urls: URLIntelligence[];
+
+  domains: URLDomainSummary[];
+
+  summary: URLIntelligenceSummary;
+
+  provider_notes: string[];
+};
+
+
+export async function analyzeUrlIntelligence(
+  evidenceId: string,
+) {
+
+  return (
+    await api.get<{
+      evidence_id: string;
+
+      intelligence:
+        URLIntelligenceResult;
+
+    }>(
+      `/emails/evidence/${evidenceId}/url-intelligence`,
+    )
+  ).data;
+}

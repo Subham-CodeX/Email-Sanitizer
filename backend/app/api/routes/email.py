@@ -42,6 +42,14 @@ from app.services.header_forensics import (
     analyze_headers,
 )
 
+from app.schemas.url_intelligence import (
+    URLIntelligenceResponse,
+)
+
+from app.services.url_intelligence import (
+    analyze_email_urls,
+)
+
 
 router = APIRouter(
     prefix="/emails",
@@ -348,4 +356,93 @@ async def analyze_email_intelligence_route(
     return {
         "evidence_id": evidence_id,
         "intelligence": result,
+    }
+
+@router.get(
+    "/evidence/{evidence_id}/url-intelligence",
+    response_model=URLIntelligenceResponse,
+)
+async def analyze_email_url_intelligence(
+    evidence_id: str,
+):
+
+    document = (
+        await get_database()
+        .email_evidence
+        .find_one(
+            {
+                "evidence_id":
+                    evidence_id
+            },
+            {
+                "_id": 0
+            },
+        )
+    )
+
+    if not document:
+
+        raise HTTPException(
+            404,
+            "Evidence record not found.",
+        )
+
+    urls = (
+        document.get(
+            "urls"
+        )
+        or []
+    )
+
+    if not urls:
+
+        raise HTTPException(
+            422,
+            (
+                "No URLs were extracted from "
+                "this email. There is nothing "
+                "for Phase 4 to analyze."
+            ),
+        )
+
+    try:
+
+        result = await analyze_email_urls(
+            evidence_id=evidence_id,
+            urls=urls,
+        )
+
+    except Exception as exc:
+
+        raise HTTPException(
+            502,
+            (
+                "Phase 4 URL intelligence "
+                f"failed: {exc}"
+            ),
+        ) from exc
+
+
+    await get_database().email_evidence.update_one(
+        {
+            "evidence_id":
+                evidence_id
+        },
+        {
+            "$set": {
+                "url_intelligence":
+                    result.model_dump(),
+
+                "phase_4":
+                    "url_domain_intelligence",
+            }
+        },
+    )
+
+    return {
+        "evidence_id":
+            evidence_id,
+
+        "intelligence":
+            result,
     }

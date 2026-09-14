@@ -34,8 +34,11 @@ import {
   IPIntelligence,
   Result,
   SenderDomainIntelligence,
+  analyzeUrlIntelligence,
+  URLIntelligenceResult,
 } from "../services/api";
 
+import UrlIntelligenceView from "./UrlIntelligenceView";
 import "../intelligence.css";
 
 export default function EmailAnalyzer() {
@@ -67,6 +70,18 @@ export default function EmailAnalyzer() {
     useState<EmailIntelligence | null>(
       null,
     );
+
+  const [
+      urlIntelligence,
+      setUrlIntelligence,
+    ] = useState<URLIntelligenceResult | null>(
+      null,
+    );
+
+    const [
+      urlIntelLoading,
+      setUrlIntelLoading,
+    ] = useState(false);
 
   const [error, setError] =
     useState("");
@@ -240,6 +255,53 @@ export default function EmailAnalyzer() {
     }
   };
 
+  const runUrlIntelligence = async () => {
+
+    if (!result)
+      return;
+
+    if (
+      result.urls.length === 0
+    ) {
+
+      setError(
+        "No URLs were extracted from this email.",
+      );
+
+      return;
+    }
+
+    setError("");
+
+    setUrlIntelLoading(true);
+
+    try {
+
+      const response =
+        await analyzeUrlIntelligence(
+          result.evidence_id,
+        );
+
+      setUrlIntelligence(
+        response.intelligence,
+      );
+
+    } catch (e: any) {
+
+      setError(
+        e?.response?.data?.detail
+        ||
+        e?.message
+        ||
+        "URL intelligence analysis failed.",
+      );
+
+    } finally {
+
+      setUrlIntelLoading(false);
+    }
+  };
+
 
   return (
     <section className="analyzer">
@@ -274,10 +336,7 @@ export default function EmailAnalyzer() {
 
       </div>
 
-
-      {/* ==================================================
-          INPUT TABS
-      ================================================== */}
+        {/* INPUT TABS */}
 
       <div className="tabs">
 
@@ -318,10 +377,7 @@ export default function EmailAnalyzer() {
 
       </div>
 
-
-      {/* ==================================================
-          UPLOAD
-      ================================================== */}
+        {/* UPLOAD */}
 
       {mode === "upload" ? (
 
@@ -379,10 +435,7 @@ Paste complete raw email here...`}
 
       )}
 
-
-      {/* ==================================================
-          INGEST
-      ================================================== */}
+        {/* INGEST */}
 
       <button
         className="primary"
@@ -400,10 +453,7 @@ Paste complete raw email here...`}
 
       </button>
 
-
-      {/* ==================================================
-          ERROR
-      ================================================== */}
+        {/* ERROR */}
 
       {error && (
 
@@ -417,10 +467,7 @@ Paste complete raw email here...`}
 
       )}
 
-
-      {/* ==================================================
-          RESULT
-      ================================================== */}
+        {/* RESULT */}
 
       {result && (
 
@@ -428,12 +475,13 @@ Paste complete raw email here...`}
           result={result}
           headers={headers}
           intelligence={intelligence}
+          urlIntelligence={urlIntelligence}
           headerLoading={headerLoading}
           intelLoading={intelLoading}
+          urlIntelLoading={urlIntelLoading}
           onRunHeaders={runHeaders}
-          onRunIntelligence={
-            runIntelligence
-          }
+          onRunIntelligence={runIntelligence}
+          onRunUrlIntelligence={runUrlIntelligence}
         />
 
       )}
@@ -442,15 +490,17 @@ Paste complete raw email here...`}
   );
 }
 
-
 function ResultView({
   result,
   headers,
   intelligence,
+  urlIntelligence,
   headerLoading,
   intelLoading,
+  urlIntelLoading,
   onRunHeaders,
   onRunIntelligence,
+  onRunUrlIntelligence,
 }: {
   result: Result;
 
@@ -460,22 +510,27 @@ function ResultView({
   intelligence:
     EmailIntelligence | null;
 
+  urlIntelligence:
+    URLIntelligenceResult | null;
+
   headerLoading: boolean;
 
   intelLoading: boolean;
 
+  urlIntelLoading: boolean;
+
   onRunHeaders: () => void;
 
   onRunIntelligence: () => void;
+
+  onRunUrlIntelligence: () => void;
 }) {
 
   return (
 
     <div className="result">
 
-      {/* ==================================================
-          EVIDENCE SUCCESS
-      ================================================== */}
+        {/* EVIDENCE SUCCESS */}
 
       <div className="success">
 
@@ -489,10 +544,7 @@ function ResultView({
 
       </div>
 
-
-      {/* ==================================================
-          HASH
-      ================================================== */}
+        {/* HASH */}
 
       <div className="hash">
 
@@ -762,6 +814,30 @@ function ResultView({
 
         </button>
 
+        <button
+          className="secondary-action url-intelligence-action"
+          onClick={
+            onRunUrlIntelligence
+          }
+          disabled={
+            urlIntelLoading
+            ||
+            !result
+            ||
+            result.urls.length === 0
+          }
+        >
+
+          <Globe2 size={17} />
+
+          {
+            urlIntelLoading
+              ? "Analyzing URLs..."
+              : "Run Phase 4 URL Intelligence"
+          }
+
+        </button>
+
       </div>
 
 
@@ -787,6 +863,16 @@ function ResultView({
           <IntelligenceView
             data={
               intelligence
+            }
+          />
+        )
+      }
+
+      {
+        urlIntelligence && (
+          <UrlIntelligenceView
+            data={
+              urlIntelligence
             }
           />
         )
