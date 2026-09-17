@@ -610,6 +610,160 @@ export type URLIntelligenceResult = {
   provider_notes: string[];
 };
 
+export interface AttachmentHashes {
+  md5: string;
+  sha1: string;
+  sha256: string;
+}
+
+export interface MagicByteResult {
+  detected_type: string;
+  detected_mime?: string | null;
+  signature?: string | null;
+  confidence: string;
+}
+
+export interface MIMEConsistency {
+  declared_mime?: string | null;
+  detected_mime?: string | null;
+  extension?: string | null;
+  extension_expected_mime?: string | null;
+  mime_matches_magic: boolean;
+  extension_matches_magic: boolean;
+  suspicious_mismatch: boolean;
+}
+
+export interface EntropyResult {
+  entropy: number;
+  sample_size: number;
+  high_entropy: boolean;
+}
+
+export interface FilenameAnalysis {
+  filename: string;
+  extension?: string | null;
+  suspicious: boolean;
+  double_extension: boolean;
+  executable_extension: boolean;
+  misleading_extension: boolean;
+  suspicious_tokens: string[];
+}
+
+export interface ArchiveEntry {
+  name: string;
+  size_bytes: number;
+  compressed_size_bytes?: number | null;
+  is_directory: boolean;
+  encrypted: boolean;
+  detected_type?: string | null;
+  sha256?: string | null;
+  suspicious: boolean;
+}
+
+export interface OfficeIndicators {
+  is_office_document: boolean;
+  office_family?: string | null;
+  has_vba_macro: boolean;
+  has_embedded_objects: boolean;
+  has_active_x: boolean;
+  has_external_links: boolean;
+  has_custom_ui: boolean;
+  indicators: string[];
+}
+
+export interface PDFIndicators {
+  is_pdf: boolean;
+  javascript: boolean;
+  open_action: boolean;
+  auto_action: boolean;
+  launch_action: boolean;
+  embedded_file: boolean;
+  rich_media: boolean;
+  xfa: boolean;
+  acroform: boolean;
+  indicators: string[];
+}
+
+export interface ReputationResult {
+  provider: string;
+  checked: boolean;
+  known_sample: boolean;
+  malicious_label?: string | null;
+  signature?: string | null;
+  first_seen?: string | null;
+  last_seen?: string | null;
+  file_type?: string | null;
+  file_format?: string | null;
+  tags: string[];
+  error?: string | null;
+}
+
+export interface AttachmentFinding {
+  code: string;
+  title: string;
+  severity: string;
+  description: string;
+}
+
+export interface AttachmentNode {
+  name: string;
+  path: string;
+  size_bytes: number;
+
+  hashes: AttachmentHashes;
+
+  magic: MagicByteResult;
+
+  mime_consistency: MIMEConsistency;
+
+  entropy: EntropyResult;
+
+  filename_analysis: FilenameAnalysis;
+
+  office: OfficeIndicators;
+
+  pdf: PDFIndicators;
+
+  archive: boolean;
+
+  archive_entries: ArchiveEntry[];
+
+  nested: AttachmentNode[];
+
+  reputation?: ReputationResult | null;
+
+  findings: AttachmentFinding[];
+
+  score: number;
+
+  level: string;
+}
+
+export interface AttachmentIntelligenceSummary {
+  total_attachments: number;
+  analyzed_attachments: number;
+  nested_files: number;
+  executable_files: number;
+  macro_files: number;
+  suspicious_filenames: number;
+  mime_mismatches: number;
+  magic_mismatches: number;
+  high_entropy_files: number;
+  archive_files: number;
+  pdf_files: number;
+  office_files: number;
+  reputation_matches: number;
+  high_risk_attachments: number;
+}
+
+export interface AttachmentIntelligenceResult {
+  evidence_id: string;
+  analyzed_at: string;
+  attachments: AttachmentNode[];
+  summary: AttachmentIntelligenceSummary;
+  provider_notes: string[];
+}
+
 
 export async function analyzeUrlIntelligence(
   evidenceId: string,
@@ -624,6 +778,19 @@ export async function analyzeUrlIntelligence(
 
     }>(
       `/emails/evidence/${evidenceId}/url-intelligence`,
+    )
+  ).data;
+}
+
+export async function analyzeAttachmentIntelligence(
+  evidenceId: string,
+) {
+  return (
+    await api.get<{
+      evidence_id: string;
+      intelligence: AttachmentIntelligenceResult;
+    }>(
+      `/emails/evidence/${evidenceId}/attachment-intelligence`,
     )
   ).data;
 }

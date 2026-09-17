@@ -69,6 +69,26 @@ class Settings(BaseSettings):
 
     url_intelligence_timeout_seconds: float = 8.0
 
+    malwarebazaar_api_key: str = ""
+
+    attachment_intelligence_max_attachments: int = 25
+
+    attachment_intelligence_max_nested_files: int = 75
+
+    attachment_intelligence_max_depth: int = 3
+
+    attachment_max_analysis_bytes: int = 20 * 1024 * 1024
+
+    attachment_max_nested_member_bytes: int = 5 * 1024 * 1024
+
+    attachment_max_total_nested_bytes: int = 25 * 1024 * 1024
+
+    attachment_entropy_sample_bytes: int = 1024 * 1024
+
+    enable_malwarebazaar: bool = True
+
+    attachment_intelligence_timeout_seconds: float = 8.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -9,6 +9,7 @@ from html import unescape
 from urllib.parse import urlparse
 from typing import Optional
 from bs4 import BeautifulSoup
+from uuid import uuid4
 from app.core.config import settings
 from app.schemas.email import (
     AttachmentMetadata,
@@ -32,12 +33,16 @@ class ParseResult:
         urls,
         body_preview,
         raw_headers,
+        attachment_payloads,
     ):
         self.metadata = metadata
         self.attachments = attachments
         self.urls = urls
         self.body_preview = body_preview
         self.raw_headers = raw_headers
+        self.attachment_payloads = (
+            attachment_payloads
+        )
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -70,12 +75,14 @@ def parse_email(raw: bytes) -> ParseResult:
     plain_parts = []
     html_parts = []
     attachments = []
+    attachment_payloads = []
 
     walk_parts(
         message,
         plain_parts,
         html_parts,
         attachments,
+        attachment_payloads,
     )
 
     plain_text = "\n".join(
@@ -185,6 +192,7 @@ def parse_email(raw: bytes) -> ParseResult:
         urls=urls,
         body_preview=body_preview,
         raw_headers=raw_headers,
+        attachment_payloads=attachment_payloads,
     )
 
 def extract_raw_headers(
@@ -217,8 +225,8 @@ def walk_parts(
     plain,
     html,
     attachments,
+    attachment_payloads,
 ):
-
     if message.is_multipart():
 
         for part in message.iter_parts():
@@ -228,6 +236,7 @@ def walk_parts(
                 plain,
                 html,
                 attachments,
+                attachment_payloads,
             )
 
         return
@@ -256,38 +265,69 @@ def walk_parts(
             < settings.max_attachment_metadata_items
         ):
 
+            attachment_id = (
+                f"AT-{uuid4().hex[:16].upper()}"
+            )
+
+            attachment = AttachmentMetadata(
+
+                attachment_id=attachment_id,
+
+                filename=(
+                    filename
+                    or "unnamed"
+                ),
+
+                content_type=(
+                    message.get_content_type()
+                ),
+
+                content_disposition=(
+                    disposition
+                    or None
+                ),
+
+                size_bytes=len(payload),
+
+                sha256=sha256_bytes(
+                    payload
+                ),
+
+                content_available=True,
+            )
+
             attachments.append(
-                AttachmentMetadata(
+                attachment
+            )
 
-                    filename=(
+            attachment_payloads.append(
+                {
+                    "attachment_id":
+                        attachment_id,
+
+                    "filename":
                         filename
-                        or "unnamed"
-                    ),
+                        or "unnamed",
 
-                    content_type=(
-                        message.get_content_type()
-                    ),
+                    "content_type":
+                        message.get_content_type(),
 
-                    content_disposition=(
+                    "content_disposition":
                         disposition
-                        or None
-                    ),
+                        or None,
 
-                    size_bytes=len(
-                        payload
-                    ),
-
-                    sha256=sha256_bytes(
-                        payload
-                    ),
-                )
+                    "content":
+                        payload,
+                }
             )
 
         return
 
     try:
 
-        content = message.get_content()
+        content = (
+            message.get_content()
+        )
 
     except Exception:
 
@@ -297,33 +337,33 @@ def walk_parts(
             )
         )
 
-        if isinstance(
-            payload,
-            bytes,
-        ):
-
-            content = payload.decode(
+        content = (
+            payload.decode(
                 "utf-8",
                 errors="replace",
             )
-
-        else:
-
-            content = str(
+            if isinstance(
+                payload,
+                bytes,
+            )
+            else str(
                 payload or ""
             )
+        )
 
-    content_type = (
+    if (
         message.get_content_type()
-    )
-
-    if content_type == "text/plain":
+        == "text/plain"
+    ):
 
         plain.append(
             str(content)
         )
 
-    elif content_type == "text/html":
+    elif (
+        message.get_content_type()
+        == "text/html"
+    ):
 
         html.append(
             str(content)

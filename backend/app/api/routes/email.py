@@ -50,6 +50,13 @@ from app.services.url_intelligence import (
     analyze_email_urls,
 )
 
+from app.schemas.attachment_intelligence import (
+    AttachmentIntelligenceResponse,
+)
+
+from app.services.attachment_intelligence import (
+    analyze_email_attachments,
+)
 
 router = APIRouter(
     prefix="/emails",
@@ -435,6 +442,114 @@ async def analyze_email_url_intelligence(
 
                 "phase_4":
                     "url_domain_intelligence",
+            }
+        },
+    )
+
+    return {
+        "evidence_id":
+            evidence_id,
+
+        "intelligence":
+            result,
+    }
+
+@router.get(
+    "/evidence/{evidence_id}/attachment-intelligence",
+    response_model=AttachmentIntelligenceResponse,
+)
+async def analyze_email_attachment_intelligence(
+    evidence_id: str,
+):
+
+    evidence = await get_database().email_evidence.find_one(
+        {
+            "evidence_id":
+                evidence_id
+        },
+        {
+            "_id": 0,
+
+            "evidence_id": 1,
+
+            "attachments": 1,
+        },
+    )
+
+    if not evidence:
+
+        raise HTTPException(
+            404,
+            "Evidence record not found.",
+        )
+
+    attachments = (
+        evidence.get(
+            "attachments"
+        )
+        or []
+    )
+
+    if not attachments:
+
+        raise HTTPException(
+            422,
+            "No attachments were extracted from this email.",
+        )
+
+    stored_count = await (
+        get_database()
+        .email_attachments
+        .count_documents(
+            {
+                "evidence_id":
+                    evidence_id
+            }
+        )
+    )
+
+    if stored_count == 0:
+
+        raise HTTPException(
+            409,
+            (
+                "Attachment bytes are not available "
+                "for this evidence record. "
+                "Re-ingest the .eml after enabling Phase 5 "
+                "attachment storage."
+            ),
+        )
+
+    try:
+
+        result = (
+            await analyze_email_attachments(
+                evidence_id
+            )
+        )
+
+    except Exception as exc:
+
+        raise HTTPException(
+            502,
+            (
+                "Phase 5 attachment intelligence failed: "
+                f"{exc}"
+            ),
+        ) from exc
+
+    await get_database().email_evidence.update_one(
+        {
+            "evidence_id":
+                evidence_id
+        },
+        {
+            "$set": {
+                "attachment_intelligence":
+                    result.model_dump(),
+
+                "phase_5":
+                    "attachment_threat_intelligence",
             }
         },
     )

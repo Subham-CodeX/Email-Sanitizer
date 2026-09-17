@@ -11,6 +11,10 @@ from app.services.email_parser import (
     sha256_bytes,
 )
 
+from app.services.attachment_storage import (
+    store_email_attachments,
+)
+
 
 async def save_evidence(
     raw,
@@ -30,6 +34,13 @@ async def save_evidence(
 
     evidence_hash = sha256_bytes(
         raw
+    )
+
+    await store_email_attachments(
+        evidence_id=evidence_id,
+        attachment_payloads=(
+            parsed.attachment_payloads
+        ),
     )
 
     document = {

@@ -9,11 +9,13 @@ class EmailAddress(BaseModel):
 
 
 class AttachmentMetadata(BaseModel):
+    attachment_id: str
     filename: str
     content_type: Optional[str] = None
     content_disposition: Optional[str] = None
     size_bytes: int
     sha256: str
+    content_available: bool = False
 
 
 class UrlMetadata(BaseModel):

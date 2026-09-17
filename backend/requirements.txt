@@ -6,3 +6,4 @@ beautifulsoup4>=4.13,<5
 python-multipart>=0.0.20,<1
 httpx>=0.28,<1
 dnspython>=2.7,<3
+olefile>=0.47,<1

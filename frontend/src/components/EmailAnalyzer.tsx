@@ -24,6 +24,7 @@ import {
   Upload,
 } from "lucide-react";
 
+
 import {
   analyzeHeaders,
   analyzeIntelligence,
@@ -36,8 +37,11 @@ import {
   SenderDomainIntelligence,
   analyzeUrlIntelligence,
   URLIntelligenceResult,
+  analyzeAttachmentIntelligence,
+  AttachmentIntelligenceResult,
 } from "../services/api";
 
+import AttachmentIntelligenceView from "./AttachmentIntelligenceView";
 import UrlIntelligenceView from "./UrlIntelligenceView";
 import "../intelligence.css";
 
@@ -94,6 +98,18 @@ export default function EmailAnalyzer() {
 
   const [intelLoading, setIntelLoading] =
     useState(false);
+
+  const [
+    attachmentIntelligence,
+    setAttachmentIntelligence,
+  ] = useState<
+    AttachmentIntelligenceResult | null
+  >(null);
+
+  const [
+    attachmentIntelLoading,
+    setAttachmentIntelLoading,
+  ] = useState(false);
 
   const ref =
     useRef<HTMLInputElement>(
@@ -302,6 +318,59 @@ export default function EmailAnalyzer() {
     }
   };
 
+  const runAttachmentIntelligence =
+  async () => {
+
+    if (!result)
+      return;
+
+    if (
+      result.attachments.length === 0
+    ) {
+
+      setError(
+        "No attachments were extracted from this email.",
+      );
+
+      return;
+    }
+
+    setError("");
+
+    setAttachmentIntelLoading(
+      true
+    );
+
+    try {
+
+      const response =
+        await analyzeAttachmentIntelligence(
+          result.evidence_id,
+        );
+
+      setAttachmentIntelligence(
+        response.intelligence,
+      );
+
+    } catch (e: any) {
+
+      setError(
+        e?.response?.data?.detail
+        ||
+        e?.message
+        ||
+        "Attachment intelligence analysis failed.",
+      );
+
+    } finally {
+
+      setAttachmentIntelLoading(
+        false
+      );
+
+    }
+  };
+
 
   return (
     <section className="analyzer">
@@ -315,7 +384,7 @@ export default function EmailAnalyzer() {
         <div>
 
           <p className="eyebrow">
-            PHASE 1 → 2 → 3 • EMAIL FORENSICS
+            PHASE 1 → 2 → 3 → 4 → 5 • EMAIL FORENSICS
           </p>
 
           <h2>
@@ -323,11 +392,11 @@ export default function EmailAnalyzer() {
           </h2>
 
           <p>
-            Ingest the sample, inspect
-            authentication and routing headers,
-            then enrich observed infrastructure
-            with passive IP and sender-domain
-            intelligence.
+            Ingest the sample, inspect authentication and
+            routing headers, enrich observed infrastructure,
+            analyze URLs and domains, then perform safe
+            attachment threat intelligence without executing
+            any attachment.
           </p>
 
         </div>
@@ -476,12 +545,15 @@ Paste complete raw email here...`}
           headers={headers}
           intelligence={intelligence}
           urlIntelligence={urlIntelligence}
+          attachmentIntelligence={attachmentIntelligence}
           headerLoading={headerLoading}
           intelLoading={intelLoading}
           urlIntelLoading={urlIntelLoading}
+          attachmentIntelLoading={attachmentIntelLoading}
           onRunHeaders={runHeaders}
           onRunIntelligence={runIntelligence}
           onRunUrlIntelligence={runUrlIntelligence}
+          onRunAttachmentIntelligence={runAttachmentIntelligence}
         />
 
       )}
@@ -495,12 +567,15 @@ function ResultView({
   headers,
   intelligence,
   urlIntelligence,
+  attachmentIntelligence,
   headerLoading,
   intelLoading,
   urlIntelLoading,
+  attachmentIntelLoading,
   onRunHeaders,
   onRunIntelligence,
   onRunUrlIntelligence,
+  onRunAttachmentIntelligence,
 }: {
   result: Result;
 
@@ -513,17 +588,24 @@ function ResultView({
   urlIntelligence:
     URLIntelligenceResult | null;
 
+  attachmentIntelligence:
+    AttachmentIntelligenceResult | null;
+
   headerLoading: boolean;
 
   intelLoading: boolean;
 
   urlIntelLoading: boolean;
 
+  attachmentIntelLoading: boolean;
+
   onRunHeaders: () => void;
 
   onRunIntelligence: () => void;
 
   onRunUrlIntelligence: () => void;
+
+  onRunAttachmentIntelligence: () => void;
 }) {
 
   return (
@@ -838,6 +920,27 @@ function ResultView({
 
         </button>
 
+        <button
+          className="secondary-action"
+          onClick={
+            onRunAttachmentIntelligence
+          }
+          disabled={
+            attachmentIntelLoading ||
+            result.attachments.length === 0
+          }
+        >
+
+          <ShieldAlert size={17} />
+
+          {
+            attachmentIntelLoading
+              ? "Analyzing Attachments..."
+              : "Run Phase 5 Attachment Intelligence"
+          }
+
+        </button>
+
       </div>
 
 
@@ -873,6 +976,16 @@ function ResultView({
           <UrlIntelligenceView
             data={
               urlIntelligence
+            }
+          />
+        )
+      }
+
+      {
+        attachmentIntelligence && (
+          <AttachmentIntelligenceView
+            data={
+              attachmentIntelligence
             }
           />
         )
